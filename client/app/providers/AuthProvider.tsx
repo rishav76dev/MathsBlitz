@@ -28,7 +28,6 @@ export interface AuthContextValue {
   status: AuthStatus;
   isAuthenticated: boolean;
   needsUsername: boolean;
-  login: () => Promise<void>;
   logout: () => void;
   setUsername: (username: string) => Promise<void>;
 }
@@ -119,46 +118,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [wallet.isConnected, wallet.address]);
 
-  // ── login() kept for manual/explicit sign-in if needed later ─────────────
-  const login = useCallback(async () => {
-    if (!wallet.address) throw new Error("Wallet not connected.");
-    setStatus("loading");
-    try {
-      const nonceRes = await fetch(`${API_BASE}/auth/nonce`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ walletAddress: wallet.address }),
-      });
-      if (!nonceRes.ok) {
-        const body = await nonceRes.json().catch(() => ({}));
-        throw new Error((body as { error?: string }).error || "Failed to request nonce");
-      }
-      const { message } = await nonceRes.json() as { nonce: string; message: string };
-      const signature = await wallet.signMessage(message);
-      const verifyRes = await fetch(`${API_BASE}/auth/verify`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ walletAddress: wallet.address, signature }),
-      });
-      if (!verifyRes.ok) {
-        const body = await verifyRes.json().catch(() => ({}));
-        throw new Error((body as { error?: string }).error || "Signature verification failed");
-      }
-      const { token: newToken, user: newUser } = await verifyRes.json() as {
-        token: string;
-        user: AuthUser;
-      };
-      localStorage.setItem(TOKEN_KEY, newToken);
-      localStorage.setItem(USER_KEY, JSON.stringify(newUser));
-      setToken(newToken);
-      setUser(newUser);
-      setStatus("authenticated");
-    } catch (err) {
-      setStatus("unauthenticated");
-      throw err;
-    }
-  }, [wallet]);
-
   // ── Logout ────────────────────────────────────────────────────────────────
   const logout = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);
@@ -209,7 +168,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         status,
         isAuthenticated: status === "authenticated",
         needsUsername: status === "authenticated" && !!user && !user.username,
-        login,
         logout,
         setUsername,
       }}
