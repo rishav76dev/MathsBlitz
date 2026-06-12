@@ -62,7 +62,7 @@ export default function Home() {
           {[
             { icon: "⚡", title: "Real-time duels",   body: "Race to solve arithmetic problems faster than your opponent." },
             { icon: "💸", title: "Blitz stakes",        body: "Put skin in the game. Wager Blitz — winner takes 95% of the pot." },
-            { icon: "🏆", title: "ELO ranking",        body: "Climb the global leaderboard with every win." },
+            { icon: "🏆", title: "Win streaks",         body: "Track your wins and climb the global leaderboard." },
           ].map((f) => (
             <div
               key={f.title}

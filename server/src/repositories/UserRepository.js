@@ -57,15 +57,14 @@ const UserRepository = {
   },
 
   /**
-   * Update a user's ELO and win/loss stats after a match.
+   * Update a user's win/loss stats after a match.
    * @param {string} id
-   * @param {{ elo: number, wins?: number, losses?: number, matchesPlayed?: number }} data
+   * @param {{ wins?: number, losses?: number, matchesPlayed?: number }} data
    */
-  async updateElo(id, data) {
+  async updateStats(id, data) {
     return User.findByIdAndUpdate(
       id,
       {
-        $set: { elo: data.elo },
         $inc: {
           wins: data.wins ?? 0,
           losses: data.losses ?? 0,
@@ -77,12 +76,12 @@ const UserRepository = {
   },
 
   /**
-   * Get the global leaderboard sorted by ELO descending.
+   * Get the global leaderboard sorted by wins descending.
    * @param {number} limit
    * @param {number} skip
    */
   async getLeaderboard(limit = 50, skip = 0) {
-    return User.find().sort({ elo: -1 }).skip(skip).limit(limit).exec();
+    return User.find().sort({ wins: -1 }).skip(skip).limit(limit).exec();
   },
 
   /**

@@ -2,6 +2,7 @@
 
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useRef,
@@ -33,23 +34,30 @@ export function useSocketContext(): SocketContextValue {
  * queue time stays valid for match/escrow/game events. All hooks share it.
  */
 export function SocketProvider({ children }: { children: React.ReactNode }) {
-  const { token, isAuthenticated } = useAuth();
+  const { token, isAuthenticated, logout } = useAuth();
   const socketRef = useRef<GameSocket | null>(null);
   const [socket, setSocket] = useState<GameSocket | null>(null);
   const [status, setStatus] = useState<SocketStatus>("idle");
 
+  const teardown = useCallback(() => {
+    if (socketRef.current) {
+      socketRef.current.off("connect");
+      socketRef.current.off("disconnect");
+      socketRef.current.off("connect_error");
+      socketRef.current.disconnect();
+      socketRef.current = null;
+    }
+    setSocket(null);
+    setStatus("idle");
+  }, []);
+
   useEffect(() => {
     if (!isAuthenticated || !token) {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-        socketRef.current = null;
-        setSocket(null);
-        setStatus("idle");
-      }
+      teardown();
       return;
     }
 
-    // Already connected with a live socket.
+    // Already connected with a live socket — nothing to do.
     if (socketRef.current?.connected) return;
 
     const s = createGameSocket(token);
@@ -59,20 +67,19 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
     s.on("connect", () => setStatus("connected"));
     s.on("disconnect", () => setStatus("idle"));
-    s.on("connect_error", () => setStatus("error"));
+    s.on("connect_error", (err) => {
+      // Expired / invalid JWT — clear the cached token so AuthProvider
+      // re-fetches a fresh one on next wallet connection.
+      if (err.message === "Invalid or expired token") {
+        logout();
+      }
+      setStatus("error");
+    });
 
     s.connect();
 
-    return () => {
-      s.off("connect");
-      s.off("disconnect");
-      s.off("connect_error");
-      s.disconnect();
-      socketRef.current = null;
-      setSocket(null);
-      setStatus("idle");
-    };
-  }, [isAuthenticated, token]);
+    return teardown;
+  }, [isAuthenticated, token, teardown, logout]);
 
   return (
     <SocketContext.Provider value={{ socket, status }}>

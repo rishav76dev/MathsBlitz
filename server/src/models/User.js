@@ -19,11 +19,6 @@ const UserSchema = new Schema(
       minlength: 3,
       maxlength: 32,
     },
-    elo: {
-      type: Number,
-      default: 1000,
-      min: 0,
-    },
     wins: {
       type: Number,
       default: 0,

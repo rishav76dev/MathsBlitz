@@ -1,6 +1,6 @@
 const { gameSessionManager } = require("./GameSessionManager");
 
-const VALID_WAGERS = [0.5, 1, 2, 5];
+const VALID_WAGERS = [0.01];
 
 /**
  * In-memory matchmaking queue.

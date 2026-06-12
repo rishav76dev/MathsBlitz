@@ -113,9 +113,8 @@ export function WalletStatus() {
             <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
               Profile
             </span>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {[
-                { label: "ELO",     value: user.elo },
                 { label: "Wins",    value: user.wins },
                 { label: "Losses",  value: user.losses },
                 { label: "Matches", value: user.matchesPlayed },

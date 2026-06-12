@@ -14,7 +14,6 @@ export interface AuthUser {
   id: string;
   walletAddress: string;
   username: string | null;
-  elo: number;
   wins: number;
   losses: number;
   matchesPlayed: number;
@@ -64,17 +63,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const parsed = JSON.parse(storedUser) as AuthUser;
           if (parsed.walletAddress.toLowerCase() === wallet.address.toLowerCase()) {
-            if (storedToken) setToken(storedToken);
+            if (storedToken) {
+              // Full cached session — no server round-trip needed.
+              setToken(storedToken);
+              setUser(parsed);
+              setStatus("authenticated");
+              return;
+            }
+            // User cached but no token (server was down last time) — restore the
+            // user optimistically so the UI is responsive, then fetch a fresh token.
             setUser(parsed);
-            setStatus("authenticated");
-            return;
           }
         } catch {
           localStorage.removeItem(TOKEN_KEY);
           localStorage.removeItem(USER_KEY);
         }
       }
-      // No stored session — try to fetch profile from backend silently
+      // Fetch profile / fresh token from backend.
       setStatus("loading");
       fetch(`${API_BASE}/auth/profile?address=${wallet.address}`)
         .then((r) => (r.ok ? r.json() : null))
@@ -92,7 +97,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               id: wallet.address!,
               walletAddress: wallet.address!,
               username: null,
-              elo: 1000,
               wins: 0,
               losses: 0,
               matchesPlayed: 0,
@@ -106,7 +110,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             id: wallet.address!,
             walletAddress: wallet.address!,
             username: null,
-            elo: 1000,
             wins: 0,
             losses: 0,
             matchesPlayed: 0,

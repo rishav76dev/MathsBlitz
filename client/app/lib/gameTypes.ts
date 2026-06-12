@@ -1,8 +1,8 @@
 // ─── Shared primitives ────────────────────────────────────────────────────────
 
-export type WagerAmount = 0.5 | 1 | 2 | 5;
+export type WagerAmount = 0.01;
 
-export const WAGER_TIERS: WagerAmount[] = [0.5, 1, 2, 5];
+export const WAGER_TIERS: WagerAmount[] = [0.01];
 
 // ─── Question (client-safe — no answer field) ─────────────────────────────────
 export interface Question {
