@@ -8,14 +8,7 @@ import { useSocket } from "../hooks/useSocket";
 import { ConnectWalletButton } from "../components/ConnectWalletButton";
 import { WagerStaking } from "../components/WagerStaking";
 import { WAGER_TIERS } from "../lib/gameTypes";
-
-// ─── Wager tier labels ────────────────────────────────────────────────────────
-const WAGER_LABELS: Record<number, string> = {
-  0.5: "0.5",
-  1: "1",
-  2: "2",
-  5: "5",
-};
+import { celoToBlitz } from "../lib/currency";
 
 // ─── Animated dots ────────────────────────────────────────────────────────────
 function WaitingDots() {
@@ -128,7 +121,7 @@ export default function MatchmakingPage() {
           <>
             <div className="flex flex-col items-center gap-3 w-full max-w-sm">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Select Wager (CELO)
+                Select Wager (Blitz)
               </p>
               <div className="grid grid-cols-4 gap-3 w-full">
                 {WAGER_TIERS.map((w) => (
@@ -144,8 +137,8 @@ export default function MatchmakingPage() {
                         : "border-border text-foreground hover:border-accent/50 hover:bg-sage-soft hover:text-accent active:scale-95"}
                     `}
                   >
-                    <span className="text-lg">{WAGER_LABELS[w]}</span>
-                    <span className="text-[10px] text-muted-foreground">CELO</span>
+                    <span className="text-lg">{celoToBlitz(w).toLocaleString("en-US")}</span>
+                    <span className="text-[10px] text-muted-foreground">Blitz</span>
                   </button>
                 ))}
               </div>
@@ -153,7 +146,7 @@ export default function MatchmakingPage() {
 
             <p className="text-xs text-muted-foreground text-center max-w-xs">
               Tap a wager to instantly enter the queue. You will be matched with
-              another player at the same stake.
+              another player at the same stake. 1000 Blitz = 1 CELO.
             </p>
           </>
         )}
@@ -175,7 +168,7 @@ export default function MatchmakingPage() {
                 Finding opponent <WaitingDots />
               </div>
               <div className="rounded-full border border-accent/25 bg-sage-soft px-4 py-1.5 text-sm text-accent">
-                {selectedWager} CELO stake
+                {selectedWager !== null ? celoToBlitz(selectedWager).toLocaleString("en-US") : "—"} Blitz stake
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 Waiting for another player at this wager…

@@ -36,7 +36,7 @@ export default function Home() {
             <span className="text-accent">On-Chain.</span>
           </h1>
           <p className="max-w-lg text-lg leading-relaxed text-muted-foreground">
-            Challenge players to real-time arithmetic duels. Winner takes the CELO
+            Challenge players to real-time arithmetic duels. Winner takes the Blitz
             stake. Connect your MiniPay wallet to get started.
           </p>
           {isAuthenticated ? (
@@ -61,7 +61,7 @@ export default function Home() {
         <section aria-label="Features" className="grid gap-5 sm:grid-cols-3">
           {[
             { icon: "⚡", title: "Real-time duels",   body: "Race to solve arithmetic problems faster than your opponent." },
-            { icon: "💸", title: "CELO stakes",        body: "Put skin in the game. Wager CELO — winner takes 95% of the pot." },
+            { icon: "💸", title: "Blitz stakes",        body: "Put skin in the game. Wager Blitz — winner takes 95% of the pot." },
             { icon: "🏆", title: "ELO ranking",        body: "Climb the global leaderboard with every win." },
           ].map((f) => (
             <div

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useEscrow } from "../hooks/useEscrow";
 import type { MatchFoundPayload } from "../lib/gameTypes";
+import { celoToBlitz } from "../lib/currency";
 
 function Spinner() {
   return <div className="size-8 rounded-full border-2 border-border border-t-accent animate-spin" />;
@@ -44,11 +45,11 @@ export function WagerStaking({
       <div className="flex flex-col items-center gap-1">
         <span className="text-xs uppercase tracking-wider text-muted-foreground">Match found — stake to play</span>
         <div className="flex items-baseline gap-1.5">
-          <span className="text-4xl text-foreground tabular-nums">{match.wager}</span>
-          <span className="text-lg text-accent">CELO</span>
+          <span className="text-4xl text-foreground tabular-nums">{celoToBlitz(match.wager).toLocaleString("en-US")}</span>
+          <span className="text-lg text-accent">Blitz</span>
         </div>
         <span className="text-xs text-muted-foreground">
-          Winner takes <span className="text-accent">95%</span> of the {match.wager * 2} CELO pot
+          Winner takes <span className="text-accent">95%</span> of the {celoToBlitz(match.wager * 2).toLocaleString("en-US")} Blitz pot
         </span>
       </div>
 
@@ -67,14 +68,14 @@ export function WagerStaking({
             <div className="flex size-12 items-center justify-center rounded-full bg-sage-soft text-2xl">💰</div>
             <p className="text-sm text-muted-foreground text-center">
               {isCreator
-                ? `Open the match by staking ${match.wager} CELO.`
-                : `Opponent staked. Match your ${match.wager} CELO stake to start.`}
+                ? `Open the match by staking ${celoToBlitz(match.wager).toLocaleString("en-US")} Blitz.`
+                : `Opponent staked. Match your ${celoToBlitz(match.wager).toLocaleString("en-US")} Blitz stake to start.`}
             </p>
             <button
               onClick={stake}
               className="w-full rounded-xl bg-primary py-3.5 text-base text-primary-foreground shadow-sm hover:opacity-90 active:scale-95 transition cursor-pointer"
             >
-              Stake {match.wager} CELO
+              Stake {celoToBlitz(match.wager).toLocaleString("en-US")} Blitz
             </button>
           </>
         )}

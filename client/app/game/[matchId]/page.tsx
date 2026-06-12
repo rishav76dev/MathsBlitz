@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, use } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useGame } from "../../hooks/useGame";
 import { useAuth } from "../../hooks/useAuth";
+import { celoToBlitz } from "../../lib/currency";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function truncateAddr(addr: string) {
@@ -156,7 +157,7 @@ function EndScreen({ winner, myUserId, myScore, opponentScore, wager, matchId, o
       </div>
 
       <div className="rounded-xl border border-border bg-card px-5 py-3 text-sm text-muted-foreground">
-        Wager: <span className="text-foreground">{wager} CELO</span>
+        Wager: <span className="text-foreground">{celoToBlitz(wager).toLocaleString("en-US")} Blitz</span>
       </div>
 
       <button
