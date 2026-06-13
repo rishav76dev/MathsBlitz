@@ -114,6 +114,13 @@ const ESCROW_ABI = [
   },
   {
     type: "function",
+    name: "refundDraw",
+    inputs: [{ name: "matchId", type: "bytes32" }],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
     name: "cancelMatch",
     inputs: [{ name: "matchId", type: "bytes32" }],
     outputs: [],

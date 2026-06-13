@@ -1,5 +1,5 @@
 const { generate } = require("./QuestionGenerator");
-const { MatchRepository } = require("../repositories");
+const { MatchRepository, UserRepository } = require("../repositories");
 const { SettlementService } = require("../services/SettlementService");
 
 const MATCH_DURATION_MS = 30_000; // 30 seconds — blitz format
@@ -191,13 +191,28 @@ class GameSession {
       // null = draw
     }
 
-    // Persist to DB
+    // Persist match result and update player stats
     try {
       await MatchRepository.finalize(this.matchId, {
         score1: this.scores[this.player1.userId] ?? 0,
         score2: this.scores[this.player2.userId] ?? 0,
         winner: winnerId,
       });
+
+      const p1Won = winnerId === this.player1.userId;
+      const p2Won = winnerId === this.player2.userId;
+      await Promise.all([
+        UserRepository.updateStats(this.player1.userId, {
+          matchesPlayed: 1,
+          wins: p1Won ? 1 : 0,
+          losses: p2Won ? 1 : 0,
+        }),
+        UserRepository.updateStats(this.player2.userId, {
+          matchesPlayed: 1,
+          wins: p2Won ? 1 : 0,
+          losses: p1Won ? 1 : 0,
+        }),
+      ]);
     } catch (err) {
       console.error("[GameSession] Failed to finalize match:", err);
     }

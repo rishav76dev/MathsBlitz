@@ -87,13 +87,20 @@ const SettlementService = {
       const onchainMatchId = match.onchainMatchId;
       if (!onchainMatchId) return { status: "skipped", reason: "no_onchain_match" };
 
-      // Draws have no on-chain winner; the contract cannot pay out a draw.
-      // Leave funds escrowed for owner-level resolution and record the state.
+      // Draw — refund both players via refundDraw (authorized signer call).
       if (!winnerAddress) {
-        await MatchRepository.setSettlement(dbMatchId, {
-          status: "skipped_draw",
+        await MatchRepository.setSettlement(dbMatchId, { status: "pending" });
+        const walletClient = getWalletClient();
+        const txHash = await walletClient.writeContract({
+          address: CONTRACT_ADDRESS,
+          abi: ESCROW_ABI,
+          functionName: "refundDraw",
+          args: [onchainMatchId],
         });
-        return { status: "skipped", reason: "draw" };
+        await getPublicClient().waitForTransactionReceipt({ hash: txHash });
+        await MatchRepository.setSettlement(dbMatchId, { status: "confirmed", txHash });
+        console.log(`[Settlement] Draw refund confirmed for ${dbMatchId} (tx: ${txHash})`);
+        return { status: "confirmed", txHash };
       }
 
       // Layer 2: DB status guard

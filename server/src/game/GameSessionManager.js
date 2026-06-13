@@ -8,8 +8,8 @@ const {
   deriveOnchainMatchId,
   deriveReservationId,
 } = require("../chain/config");
-const { QueueManager } = require("./QueueManager");
-
+// QueueManager is required lazily inside methods to break the circular dependency
+// (QueueManager → GameSessionManager → QueueManager).
 const START_DELAY_MS = 2_000; // grace period for clients to navigate before play starts
 
 /**
@@ -121,6 +121,7 @@ class GameSessionManager {
       walletAddress: pending.walletAddress,
       reservationId,
     };
+    const { QueueManager } = require("./QueueManager");
     QueueManager.enqueue(player, pending.wager, io);
 
     // Notify the client they're now in the queue.
