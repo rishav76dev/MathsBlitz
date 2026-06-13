@@ -2,21 +2,83 @@ const {
   ESCROW_ENABLED,
   CONTRACT_ADDRESS,
   getPublicClient,
+  getWalletClient,
   wagerToWei,
 } = require("../chain/config");
 const { ESCROW_ABI, OnchainMatchStatus } = require("../chain/escrowAbi");
 
 /**
- * Read-side helper around the deployed escrow contract.
- * Used to verify that both players have actually staked before a match starts,
- * rather than trusting the clients' word.
+ * On-chain helpers for the symmetric MathsBlitzEscrow contract.
+ *
+ * TODO: migrate to Celo mainnet before production.
  */
 const EscrowService = {
   enabled: ESCROW_ENABLED,
   OnchainMatchStatus,
 
   /**
-   * Read the on-chain Match struct.
+   * Read a player's on-chain Reservation struct.
+   * @param {`0x${string}`} reservationId
+   * @returns {Promise<{ player: string, amount: bigint, linked: boolean } | null>}
+   */
+  async getReservation(reservationId) {
+    if (!ESCROW_ENABLED) return null;
+    const r = await getPublicClient().readContract({
+      address: CONTRACT_ADDRESS,
+      abi: ESCROW_ABI,
+      functionName: "getReservation",
+      args: [reservationId],
+    });
+    return { player: r.player, amount: r.amount, linked: r.linked };
+  },
+
+  /**
+   * Verify that a reservation exists on-chain with the expected player and wager.
+   * Retries up to 5 times with 2 s delays to handle RPC indexing lag after a
+   * freshly mined transaction.
+   *
+   * @param {`0x${string}`} reservationId
+   * @param {string} expectedPlayer  wallet address
+   * @param {number} expectedWager   wager in CELO (e.g. 0.01)
+   * @returns {Promise<{ ok: boolean, reason?: string }>}
+   */
+  async isReservationValid(reservationId, expectedPlayer, expectedWager) {
+    if (!ESCROW_ENABLED) return { ok: true };
+
+    const RETRIES = 5;
+    const DELAY_MS = 2_000;
+
+    for (let attempt = 1; attempt <= RETRIES; attempt++) {
+      const r = await this.getReservation(reservationId);
+
+      if (!r || r.player === "0x0000000000000000000000000000000000000000") {
+        if (attempt < RETRIES) {
+          console.log(`[Escrow] reservation_not_found (attempt ${attempt}/${RETRIES}), retrying in ${DELAY_MS}ms…`);
+          await new Promise((res) => setTimeout(res, DELAY_MS));
+          continue;
+        }
+        return { ok: false, reason: "reservation_not_found" };
+      }
+
+      if (r.linked) return { ok: false, reason: "already_linked" };
+
+      if (r.player.toLowerCase() !== expectedPlayer.toLowerCase()) {
+        return { ok: false, reason: "player_mismatch" };
+      }
+
+      const expectedWei = wagerToWei(expectedWager);
+      if (r.amount !== expectedWei) {
+        return { ok: false, reason: "wager_mismatch" };
+      }
+
+      return { ok: true };
+    }
+
+    return { ok: false, reason: "reservation_not_found" };
+  },
+
+  /**
+   * Read the on-chain Match struct (after linkMatch has been called).
    * @param {`0x${string}`} onchainMatchId
    * @returns {Promise<{ player1: string, player2: string, wager: bigint, status: number } | null>}
    */
@@ -32,49 +94,24 @@ const EscrowService = {
   },
 
   /**
-   * True once player1 has opened the match (status Open or later, before cancel).
-   * @param {`0x${string}`} onchainMatchId
-   */
-  async isCreated(onchainMatchId) {
-    const m = await this.getMatch(onchainMatchId);
-    if (!m) return false;
-    return m.status === OnchainMatchStatus.Open || m.status === OnchainMatchStatus.Active;
-  },
-
-  /**
-   * True once BOTH players have staked (status Active) — safe to start the game.
-   * @param {`0x${string}`} onchainMatchId
-   */
-  async isActive(onchainMatchId) {
-    const m = await this.getMatch(onchainMatchId);
-    return m ? m.status === OnchainMatchStatus.Active : false;
-  },
-
-  /**
-   * Verify the on-chain match matches the expected players and wager.
-   * Defends against a client supplying a mismatched stake or wrong identities.
+   * Submit linkMatch on-chain. Called by the server once two players are matched.
+   * Waits for the transaction to be mined.
    *
-   * @param {`0x${string}`} onchainMatchId
-   * @param {{ player1: string, player2: string, wager: number }} expected
-   * @returns {Promise<{ ok: boolean, reason?: string, status?: number }>}
+   * @param {`0x${string}`} matchId
+   * @param {`0x${string}`} reservationA
+   * @param {`0x${string}`} reservationB
+   * @returns {Promise<`0x${string}`>} transaction hash
    */
-  async verifyActiveMatch(onchainMatchId, expected) {
-    if (!ESCROW_ENABLED) return { ok: true }; // escrow disabled → nothing to verify
-    const m = await this.getMatch(onchainMatchId);
-    if (!m) return { ok: false, reason: "match_not_found" };
-    if (m.status !== OnchainMatchStatus.Active) {
-      return { ok: false, reason: "not_active", status: m.status };
-    }
-    const expectedWei = wagerToWei(expected.wager);
-    if (m.wager !== expectedWei) return { ok: false, reason: "wager_mismatch", status: m.status };
-
-    const lc = (a) => (a || "").toLowerCase();
-    const got = [lc(m.player1), lc(m.player2)].sort();
-    const want = [lc(expected.player1), lc(expected.player2)].sort();
-    if (got[0] !== want[0] || got[1] !== want[1]) {
-      return { ok: false, reason: "player_mismatch", status: m.status };
-    }
-    return { ok: true, status: m.status };
+  async linkMatch(matchId, reservationA, reservationB) {
+    const walletClient = getWalletClient();
+    const hash = await walletClient.writeContract({
+      address: CONTRACT_ADDRESS,
+      abi: ESCROW_ABI,
+      functionName: "linkMatch",
+      args: [matchId, reservationA, reservationB],
+    });
+    await getPublicClient().waitForTransactionReceipt({ hash });
+    return hash;
   },
 };
 

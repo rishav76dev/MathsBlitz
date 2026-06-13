@@ -1,5 +1,6 @@
-const { QueueManager } = require("../game/QueueManager");
+const { QueueManager, VALID_WAGERS } = require("../game/QueueManager");
 const { gameSessionManager } = require("../game/GameSessionManager");
+const { ESCROW_ENABLED } = require("../chain/config");
 
 /**
  * Register all game-related socket event handlers on an authenticated socket.
@@ -10,8 +11,34 @@ const { gameSessionManager } = require("../game/GameSessionManager");
 function registerGameHandlers(socket, io) {
   const { userId, walletAddress } = socket;
 
-  // ── join_queue ────────────────────────────────────────────────────────────
+  // ── stake_and_queue (escrow-enabled path) ─────────────────────────────────
+  // Client requests a reservation ID so it can depositStake on-chain before
+  // entering the queue. After the tx confirms, client emits confirm_stake.
+  socket.on("stake_and_queue", ({ wager } = {}) => {
+    const wagerNum = Number(wager);
+    if (!VALID_WAGERS.includes(wagerNum)) {
+      socket.emit("error_event", { message: "Invalid wager amount." });
+      return;
+    }
+    if (QueueManager.isQueued(userId)) {
+      socket.emit("error_event", { message: "Already in queue." });
+      return;
+    }
+    gameSessionManager.createReservation(
+      { userId, socketId: socket.id, walletAddress },
+      wagerNum,
+      io
+    );
+  });
+
+  // ── join_queue (escrow-disabled path) ─────────────────────────────────────
+  // When escrow is off, players join the queue directly without staking.
   socket.on("join_queue", ({ wager } = {}) => {
+    if (ESCROW_ENABLED) {
+      // Redirect: escrow is on, use stake_and_queue instead.
+      socket.emit("error_event", { message: "Use stake_and_queue when escrow is enabled." });
+      return;
+    }
     const wagerNum = Number(wager);
     const ok = QueueManager.enqueue(
       { userId, socketId: socket.id, walletAddress },
@@ -29,10 +56,11 @@ function registerGameHandlers(socket, io) {
   });
 
   // ── confirm_stake ─────────────────────────────────────────────────────────
-  // Client reports its escrow stake tx has confirmed; server verifies on-chain.
-  socket.on("confirm_stake", ({ matchId } = {}) => {
-    if (!matchId) return;
-    gameSessionManager.handleStakeConfirmation(userId, matchId, io);
+  // Client reports its depositStake tx has confirmed. Server verifies on-chain,
+  // then adds the player to the matchmaking queue.
+  socket.on("confirm_stake", ({ reservationId } = {}) => {
+    if (!reservationId) return;
+    gameSessionManager.handleStakeConfirmation(userId, reservationId, io);
   });
 
   // ── submit_answer ─────────────────────────────────────────────────────────

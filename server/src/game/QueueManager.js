@@ -6,7 +6,7 @@ const VALID_WAGERS = [0.01];
  * In-memory matchmaking queue.
  * One queue array per wager tier.
  *
- * @type {Map<number, Array<{ userId: string, socketId: string, walletAddress: string, joinedAt: number }>>}
+ * @type {Map<number, Array<{ userId: string, socketId: string, walletAddress: string, reservationId: string, joinedAt: number }>>}
  */
 const queues = new Map(VALID_WAGERS.map((w) => [w, []]));
 
@@ -17,10 +17,11 @@ const playerWagerIndex = new Map();
 
 const QueueManager = {
   /**
-   * Add a player to the matchmaking queue.
+   * Add a pre-staked player to the matchmaking queue.
+   * Called by GameSessionManager after on-chain reservation is verified.
    * Returns false if the wager is invalid or the player is already queued.
    *
-   * @param {{ userId: string, socketId: string, walletAddress: string }} player
+   * @param {{ userId: string, socketId: string, walletAddress: string, reservationId: string }} player
    * @param {number} wager
    * @param {import("socket.io").Server} io
    * @returns {boolean}
@@ -32,10 +33,6 @@ const QueueManager = {
     const queue = queues.get(wager);
     queue.push({ ...player, joinedAt: Date.now() });
     playerWagerIndex.set(player.userId, wager);
-
-    // Notify the player they're in the queue
-    const socket = io.sockets.sockets.get(player.socketId);
-    if (socket) socket.emit("queue_joined", { wager });
 
     console.log(
       `[Queue] ${player.userId} joined ${wager} CELO queue (depth: ${queue.length})`

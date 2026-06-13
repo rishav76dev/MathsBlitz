@@ -1,8 +1,11 @@
 /**
  * Minimal ABI for MathsBlitzEscrow — only the entries the backend needs.
- * Mirrors contract/src/MathsBlitzEscrow.sol (native CELO escrow).
+ * Mirrors contract/src/MathsBlitzEscrow.sol (symmetric native-CELO escrow).
+ *
+ * TODO: migrate to Celo mainnet before production.
  */
 const ESCROW_ABI = [
+  // ── Views ──────────────────────────────────────────────────────────────────
   {
     type: "function",
     name: "authorizedSigner",
@@ -29,6 +32,23 @@ const ESCROW_ABI = [
     name: "paused",
     inputs: [],
     outputs: [{ name: "", type: "bool" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "getReservation",
+    inputs: [{ name: "reservationId", type: "bytes32" }],
+    outputs: [
+      {
+        name: "",
+        type: "tuple",
+        components: [
+          { name: "player", type: "address" },
+          { name: "amount", type: "uint256" },
+          { name: "linked", type: "bool" },
+        ],
+      },
+    ],
     stateMutability: "view",
   },
   {
@@ -69,6 +89,18 @@ const ESCROW_ABI = [
     outputs: [{ name: "", type: "bytes32" }],
     stateMutability: "view",
   },
+  // ── Writes ─────────────────────────────────────────────────────────────────
+  {
+    type: "function",
+    name: "linkMatch",
+    inputs: [
+      { name: "matchId", type: "bytes32" },
+      { name: "reservationA", type: "bytes32" },
+      { name: "reservationB", type: "bytes32" },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
   {
     type: "function",
     name: "settleMatch",
@@ -90,15 +122,15 @@ const ESCROW_ABI = [
 ];
 
 /**
- * MatchStatus enum (matches the Solidity enum order).
+ * MatchStatus enum — matches Solidity enum order.
+ * Matches go directly NonExistent → Active (no Open step).
  * @enum {number}
  */
 const OnchainMatchStatus = {
   NonExistent: 0,
-  Open: 1,
-  Active: 2,
-  Settled: 3,
-  Cancelled: 4,
+  Active: 1,
+  Settled: 2,
+  Cancelled: 3,
 };
 
 module.exports = { ESCROW_ABI, OnchainMatchStatus };

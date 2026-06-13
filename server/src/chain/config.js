@@ -7,7 +7,7 @@ const {
   getAddress,
 } = require("viem");
 const { privateKeyToAccount } = require("viem/accounts");
-const { celo, celoAlfajores } = require("viem/chains");
+const { celo, celoSepolia } = require("viem/chains");
 
 /**
  * On-chain configuration for the MathsBlitz escrow.
@@ -20,18 +20,23 @@ const { celo, celoAlfajores } = require("viem/chains");
  * Required env vars to enable escrow:
  *   ESCROW_CONTRACT_ADDRESS  - deployed MathsBlitzEscrow address
  *   SETTLEMENT_PRIVATE_KEY   - private key of the authorised signer (0x-prefixed)
- *   CELO_RPC_URL             - RPC endpoint (defaults to Alfajores forno)
- *   CELO_NETWORK             - "mainnet" | "alfajores" (default "alfajores")
+ *   CELO_RPC_URL             - RPC endpoint (defaults to Celo Sepolia forno)
+ *   CELO_NETWORK             - "mainnet" | "sepolia" (default "sepolia")
+ *
+ * TODO: migrate to Celo mainnet before production.
+ * To switch: set CELO_NETWORK=mainnet, update ESCROW_CONTRACT_ADDRESS to the
+ * mainnet deployment, and fund the settlement signer with real CELO.
  */
 
-const NETWORK = (process.env.CELO_NETWORK || "alfajores").toLowerCase();
-const CHAIN = NETWORK === "mainnet" ? celo : celoAlfajores;
+// Currently on Celo Sepolia testnet (chain 11142220).
+const NETWORK = (process.env.CELO_NETWORK || "sepolia").toLowerCase();
+const CHAIN = NETWORK === "mainnet" ? celo : celoSepolia;
 
 const RPC_URL =
   process.env.CELO_RPC_URL ||
   (NETWORK === "mainnet"
     ? "https://forno.celo.org"
-    : "https://alfajores-forno.celo-testnet.org");
+    : "https://forno.celo-sepolia.celo-testnet.org");
 
 const CONTRACT_ADDRESS = process.env.ESCROW_CONTRACT_ADDRESS || null;
 const SETTLEMENT_PRIVATE_KEY = process.env.SETTLEMENT_PRIVATE_KEY || null;
@@ -75,14 +80,21 @@ function getWalletClient() {
 
 /**
  * Derive the deterministic on-chain matchId (bytes32) from the DB match id.
- * Both client and server must agree — the server is the source of truth and
- * sends this value to clients in `match_found`.
- *
  * @param {string} dbMatchId - Mongo ObjectId string
  * @returns {`0x${string}`}
  */
 function deriveOnchainMatchId(dbMatchId) {
   return keccak256(stringToHex(`mathsblitz:${dbMatchId}`));
+}
+
+/**
+ * Derive a unique reservation ID for a player's pre-queue stake.
+ * @param {string} userId - server-side user id
+ * @param {number} timestamp - Date.now() at reservation creation
+ * @returns {`0x${string}`}
+ */
+function deriveReservationId(userId, timestamp) {
+  return keccak256(stringToHex(`mathsblitz:reservation:${userId}:${timestamp}`));
 }
 
 /**
@@ -106,5 +118,6 @@ module.exports = {
   getWalletClient,
   getSettlementAccount,
   deriveOnchainMatchId,
+  deriveReservationId,
   wagerToWei,
 };
