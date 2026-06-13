@@ -10,6 +10,7 @@ import type {
   ScoreUpdatePayload,
   GameEndedPayload,
   OpponentDisconnectedPayload,
+  SettlementUpdatePayload,
 } from "../lib/gameTypes";
 
 // Fallback only — the authoritative match length comes from the server's
@@ -29,6 +30,7 @@ const initialState = (matchId: string, wager: number): GameState => ({
   winner: null,
   opponentDisconnected: false,
   wager,
+  settlement: null,
 });
 
 /**
@@ -114,11 +116,17 @@ export function useGame(matchId: string, wager: number) {
       setState((s) => ({ ...s, opponentDisconnected: true }));
     };
 
+    const onSettlementUpdate = (payload: SettlementUpdatePayload) => {
+      if (payload.matchId !== matchId) return;
+      setState((s) => ({ ...s, settlement: payload }));
+    };
+
     socket.on("game_started", onGameStarted);
     socket.on("new_question", onNewQuestion);
     socket.on("score_update", onScoreUpdate);
     socket.on("game_ended", onGameEnded);
     socket.on("opponent_disconnected", onOpponentDisconnected);
+    socket.on("settlement_update", onSettlementUpdate);
 
     return () => {
       socket.off("game_started", onGameStarted);
@@ -126,6 +134,7 @@ export function useGame(matchId: string, wager: number) {
       socket.off("score_update", onScoreUpdate);
       socket.off("game_ended", onGameEnded);
       socket.off("opponent_disconnected", onOpponentDisconnected);
+      socket.off("settlement_update", onSettlementUpdate);
       clearInterval(timerRef.current!);
     };
   }, [socket, matchId, user?.id]);

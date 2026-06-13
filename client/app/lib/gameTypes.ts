@@ -132,4 +132,5 @@ export interface GameState {
   winner: string | null; // userId
   opponentDisconnected: boolean;
   wager: number;
+  settlement: SettlementUpdatePayload | null;
 }

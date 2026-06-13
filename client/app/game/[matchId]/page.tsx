@@ -121,14 +121,66 @@ function NumberPad({ value, onChange, onSubmit }: {
   );
 }
 
+// ─── Settlement Badge ─────────────────────────────────────────────────────────
+function SettlementBadge({ settlement, iWon, isDraw }: {
+  settlement: import("../../lib/gameTypes").SettlementUpdatePayload | null;
+  iWon: boolean;
+  isDraw: boolean;
+}) {
+  if (!settlement) {
+    return (
+      <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
+        <span className="size-2 rounded-full bg-yellow-400 animate-pulse" />
+        Settling on-chain…
+      </div>
+    );
+  }
+
+  const { status, txHash } = settlement;
+  const explorerBase = "https://celo-sepolia.blockscout.com/tx/";
+
+  if (status === "confirmed") {
+    const label = isDraw ? "Refund sent to your wallet" : iWon ? "Prize sent to your wallet" : "Result confirmed on-chain";
+    return (
+      <div className="flex flex-col items-center gap-1">
+        <div className="flex items-center gap-2 rounded-xl border border-accent/30 bg-sage-soft px-4 py-3 text-sm text-accent">
+          <span>✓</span> {label}
+        </div>
+        {txHash && (
+          <a href={`${explorerBase}${txHash}`} target="_blank" rel="noopener noreferrer"
+            className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2">
+            View transaction ↗
+          </a>
+        )}
+      </div>
+    );
+  }
+
+  if (status === "failed") {
+    return (
+      <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        Settlement failed — contact support with Match ID
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
+      <span className="size-2 rounded-full bg-yellow-400 animate-pulse" />
+      {status === "submitted" ? "Transaction submitted…" : "Settling on-chain…"}
+    </div>
+  );
+}
+
 // ─── End Screen ───────────────────────────────────────────────────────────────
-function EndScreen({ winner, myUserId, myScore, opponentScore, wager, matchId, onRematch }: {
+function EndScreen({ winner, myUserId, myScore, opponentScore, wager, matchId, settlement, onRematch }: {
   winner: string | null;
   myUserId: string | null;
   myScore: number;
   opponentScore: number;
   wager: number;
   matchId: string;
+  settlement: import("../../lib/gameTypes").SettlementUpdatePayload | null;
   onRematch: () => void;
 }) {
   const iWon = winner === myUserId;
@@ -159,6 +211,8 @@ function EndScreen({ winner, myUserId, myScore, opponentScore, wager, matchId, o
       <div className="rounded-xl border border-border bg-card px-5 py-3 text-sm text-muted-foreground">
         Wager: <span className="text-foreground">{celoToBlitz(wager).toLocaleString("en-US")} Blitz</span>
       </div>
+
+      <SettlementBadge settlement={settlement} iWon={iWon} isDraw={isDraw} />
 
       <button
         id="play-again-btn"
@@ -191,6 +245,7 @@ export default function GamePage({ params }: { params: Promise<{ matchId: string
     timeLeft,
     winner,
     opponentDisconnected,
+    settlement,
     submitAnswer,
   } = useGame(matchId, wager);
 
@@ -235,6 +290,7 @@ export default function GamePage({ params }: { params: Promise<{ matchId: string
           opponentScore={opponentScore}
           wager={wager}
           matchId={matchId}
+          settlement={settlement}
           onRematch={() => router.push("/matchmaking")}
         />
       </div>
