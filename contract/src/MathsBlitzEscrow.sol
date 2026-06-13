@@ -9,17 +9,20 @@ import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 /**
  * @title  MathsBlitzEscrow
- * @notice Two-player wager escrow in **native CELO**, settled by an authorised
- *         off-chain signer. Winner receives 95 % of the pot; treasury receives 5 %.
+ * @notice Symmetric two-player wager escrow in native CELO.
+ *         Both players deposit independently before matchmaking. The authorised
+ *         backend signer links two deposits into a match once an opponent is
+ *         found, then settles after the game.
+ *
+ * TODO: migrate to Celo mainnet before production.
  *
  * Flow
  * ----
- * 1. player1 calls createMatch(matchId){value: wager}  → match is OPEN
- * 2. player2 calls joinMatch(matchId){value: wager}     → match is ACTIVE
- * 3. backend signer calls settleMatch(matchId, winner, sig) → distributes pot
+ * 1. player calls  depositStake(reservationId){value: wager}   → reservation created
+ * 2. server calls  linkMatch(matchId, reservA, reservB)         → match Active
+ * 3. server calls  settleMatch(matchId, winner, sig)            → pot distributed
  *
- * Native CELO is the chain's gas currency (18 decimals, same as ETH), so all
- * stakes and payouts use `msg.value` / `call{value:}` rather than ERC-20 transfers.
+ * Player can call withdrawStake(reservationId) at any time before linkMatch.
  */
 contract MathsBlitzEscrow is Ownable, Pausable, ReentrancyGuard {
     using ECDSA for bytes32;
@@ -28,10 +31,15 @@ contract MathsBlitzEscrow is Ownable, Pausable, ReentrancyGuard {
 
     enum MatchStatus {
         NonExistent,
-        Open,
         Active,
         Settled,
         Cancelled
+    }
+
+    struct Reservation {
+        address player;
+        uint256 amount;
+        bool linked;
     }
 
     struct Match {
@@ -49,22 +57,18 @@ contract MathsBlitzEscrow is Ownable, Pausable, ReentrancyGuard {
 
     // ─── State ────────────────────────────────────────────────────────────────
 
-    /// @notice Address that receives the 5 % treasury cut.
     address public treasury;
-
-    /// @notice Off-chain signer authorised to submit settlement proofs.
     address public authorizedSigner;
 
-    /// @dev matchId → Match
+    mapping(bytes32 => Reservation) private _reservations;
     mapping(bytes32 => Match) private _matches;
-
-    /// @dev Replay-protection: settlement digests already consumed.
     mapping(bytes32 => bool) private _usedSettlements;
 
     // ─── Events ───────────────────────────────────────────────────────────────
 
-    event MatchCreated(bytes32 indexed matchId, address indexed player1, uint256 wager);
-    event MatchJoined(bytes32 indexed matchId, address indexed player2);
+    event StakeDeposited(bytes32 indexed reservationId, address indexed player, uint256 amount);
+    event StakeWithdrawn(bytes32 indexed reservationId, address indexed player, uint256 amount);
+    event MatchLinked(bytes32 indexed matchId, bytes32 indexed reservationA, bytes32 indexed reservationB, uint256 wager);
     event MatchSettled(bytes32 indexed matchId, address indexed winner, uint256 winnerAmount, uint256 treasuryAmount);
     event MatchCancelled(bytes32 indexed matchId);
     event TreasuryUpdated(address indexed oldTreasury, address indexed newTreasury);
@@ -72,12 +76,14 @@ contract MathsBlitzEscrow is Ownable, Pausable, ReentrancyGuard {
 
     // ─── Errors ───────────────────────────────────────────────────────────────
 
+    error ReservationAlreadyExists(bytes32 reservationId);
+    error ReservationNotFound(bytes32 reservationId);
+    error ReservationAlreadyLinked(bytes32 reservationId);
     error MatchAlreadyExists(bytes32 matchId);
-    error MatchNotOpen(bytes32 matchId);
     error MatchNotActive(bytes32 matchId);
-    error CannotJoinOwnMatch();
     error WinnerNotAPlayer(bytes32 matchId, address winner);
-    error WrongStake(uint256 expected, uint256 sent);
+    error WagerMismatch(uint256 amountA, uint256 amountB);
+    error SamePlayer();
     error InvalidSignature();
     error SettlementAlreadyUsed();
     error NotAuthorized();
@@ -87,63 +93,100 @@ contract MathsBlitzEscrow is Ownable, Pausable, ReentrancyGuard {
 
     // ─── Constructor ──────────────────────────────────────────────────────────
 
-    /**
-     * @param _treasury         Address that receives the 5 % fee.
-     * @param _authorizedSigner Off-chain signer that approves settlements.
-     */
     constructor(address _treasury, address _authorizedSigner) Ownable(msg.sender) {
         if (_treasury == address(0) || _authorizedSigner == address(0)) revert ZeroAddress();
-
         treasury = _treasury;
         authorizedSigner = _authorizedSigner;
+    }
+
+    // ─── Modifiers ────────────────────────────────────────────────────────────
+
+    modifier onlyAuthorizedSigner() {
+        if (msg.sender != authorizedSigner) revert NotAuthorized();
+        _;
     }
 
     // ─── External ─────────────────────────────────────────────────────────────
 
     /**
-     * @notice Player 1 opens a match and stakes `msg.value` CELO.
-     * @param matchId Unique identifier for this match (generated off-chain, e.g. keccak256 of DB id).
-     *                The per-player wager is fixed to the CELO sent with this call.
+     * @notice Lock CELO against a unique reservation ID.
+     *         Call this before joining the matchmaking queue.
+     * @param reservationId Unique ID derived off-chain (keccak256 of userId + timestamp).
      */
-    function createMatch(bytes32 matchId) external payable whenNotPaused {
+    function depositStake(bytes32 reservationId) external payable whenNotPaused {
         if (msg.value == 0) revert ZeroWager();
-        if (_matches[matchId].status != MatchStatus.NonExistent) revert MatchAlreadyExists(matchId);
+        if (_reservations[reservationId].player != address(0)) revert ReservationAlreadyExists(reservationId);
 
-        _matches[matchId] = Match({
-            player1: msg.sender,
-            player2: address(0),
-            wager: msg.value,
-            status: MatchStatus.Open
+        _reservations[reservationId] = Reservation({
+            player: msg.sender,
+            amount: msg.value,
+            linked: false
         });
 
-        emit MatchCreated(matchId, msg.sender, msg.value);
+        emit StakeDeposited(reservationId, msg.sender, msg.value);
     }
 
     /**
-     * @notice Player 2 joins an open match by matching the exact wager in CELO.
-     * @param matchId The match to join.
+     * @notice Reclaim an unlinked stake. Only the depositing player may call this.
+     * @param reservationId The reservation to withdraw.
      */
-    function joinMatch(bytes32 matchId) external payable whenNotPaused {
-        Match storage m = _matches[matchId];
-        if (m.status != MatchStatus.Open) revert MatchNotOpen(matchId);
-        if (m.player1 == msg.sender) revert CannotJoinOwnMatch();
-        if (msg.value != m.wager) revert WrongStake(m.wager, msg.value);
+    function withdrawStake(bytes32 reservationId) external nonReentrant {
+        Reservation storage r = _reservations[reservationId];
+        if (r.player == address(0)) revert ReservationNotFound(reservationId);
+        if (r.linked) revert ReservationAlreadyLinked(reservationId);
+        if (r.player != msg.sender) revert NotAuthorized();
 
-        m.player2 = msg.sender;
-        m.status = MatchStatus.Active;
+        uint256 amount = r.amount;
+        address player = r.player;
+        delete _reservations[reservationId];
 
-        emit MatchJoined(matchId, msg.sender);
+        _sendValue(player, amount);
+        emit StakeWithdrawn(reservationId, player, amount);
     }
 
     /**
-     * @notice Settle an active match. Must be called by the owner OR accompanied
-     *         by a valid authorised-signer signature. This is the only path that
-     *         releases the escrowed pot.
-     *
+     * @notice Link two pre-staked reservations into an active match.
+     *         Only callable by the authorised backend signer.
+     * @param matchId      Unique match ID (keccak256 of DB record id).
+     * @param reservationA Reservation belonging to player1.
+     * @param reservationB Reservation belonging to player2.
+     */
+    function linkMatch(
+        bytes32 matchId,
+        bytes32 reservationA,
+        bytes32 reservationB
+    ) external whenNotPaused onlyAuthorizedSigner {
+        if (_matches[matchId].status != MatchStatus.NonExistent) revert MatchAlreadyExists(matchId);
+
+        Reservation storage rA = _reservations[reservationA];
+        Reservation storage rB = _reservations[reservationB];
+
+        if (rA.player == address(0)) revert ReservationNotFound(reservationA);
+        if (rB.player == address(0)) revert ReservationNotFound(reservationB);
+        if (rA.linked) revert ReservationAlreadyLinked(reservationA);
+        if (rB.linked) revert ReservationAlreadyLinked(reservationB);
+        if (rA.amount != rB.amount) revert WagerMismatch(rA.amount, rB.amount);
+        if (rA.player == rB.player) revert SamePlayer();
+
+        rA.linked = true;
+        rB.linked = true;
+
+        _matches[matchId] = Match({
+            player1: rA.player,
+            player2: rB.player,
+            wager: rA.amount,
+            status: MatchStatus.Active
+        });
+
+        emit MatchLinked(matchId, reservationA, reservationB, rA.amount);
+    }
+
+    /**
+     * @notice Settle an active match. Requires a valid authorised-signer signature,
+     *         or may be called directly by the owner for emergency settlement.
      * @param matchId   The match to settle.
      * @param winner    Either player1 or player2.
-     * @param signature ECDSA signature over the settlement digest produced by
-     *                  `authorizedSigner`. Required when caller is not the owner.
+     * @param signature ECDSA signature from authorizedSigner over the settlement digest.
      */
     function settleMatch(
         bytes32 matchId,
@@ -157,7 +200,6 @@ contract MathsBlitzEscrow is Ownable, Pausable, ReentrancyGuard {
         bytes32 digest = _settlementDigest(matchId, winner);
 
         if (msg.sender != owner()) {
-            // Non-owner path: verify authorised-signer signature
             if (_usedSettlements[digest]) revert SettlementAlreadyUsed();
             address recovered = MessageHashUtils.toEthSignedMessageHash(digest).recover(signature);
             if (recovered != authorizedSigner) revert InvalidSignature();
@@ -168,7 +210,7 @@ contract MathsBlitzEscrow is Ownable, Pausable, ReentrancyGuard {
 
         uint256 pot = m.wager * 2;
         uint256 winnerAmount = (pot * WINNER_BPS) / BPS_DENOM;
-        uint256 treasuryAmount = pot - winnerAmount; // captures any rounding dust
+        uint256 treasuryAmount = pot - winnerAmount;
 
         _sendValue(winner, winnerAmount);
         _sendValue(treasury, treasuryAmount);
@@ -177,24 +219,28 @@ contract MathsBlitzEscrow is Ownable, Pausable, ReentrancyGuard {
     }
 
     /**
-     * @notice Cancel an Open match and refund player1's stake. Callable by
-     *         player1 (to reclaim an unmatched stake) or the owner (emergency).
+     * @notice Emergency: cancel an active match and refund both players. Owner only.
      */
-    function cancelMatch(bytes32 matchId) external nonReentrant {
+    function cancelMatch(bytes32 matchId) external nonReentrant onlyOwner {
         Match storage m = _matches[matchId];
-        if (m.status != MatchStatus.Open) revert MatchNotOpen(matchId);
-        if (msg.sender != m.player1 && msg.sender != owner()) revert NotAuthorized();
+        if (m.status != MatchStatus.Active) revert MatchNotActive(matchId);
 
-        uint256 refund = m.wager;
-        address player1 = m.player1;
+        address p1 = m.player1;
+        address p2 = m.player2;
+        uint256 wager = m.wager;
         m.status = MatchStatus.Cancelled;
 
-        _sendValue(player1, refund);
+        _sendValue(p1, wager);
+        _sendValue(p2, wager);
 
         emit MatchCancelled(matchId);
     }
 
     // ─── Views ────────────────────────────────────────────────────────────────
+
+    function getReservation(bytes32 reservationId) external view returns (Reservation memory) {
+        return _reservations[reservationId];
+    }
 
     function getMatch(bytes32 matchId) external view returns (Match memory) {
         return _matches[matchId];
@@ -204,7 +250,6 @@ contract MathsBlitzEscrow is Ownable, Pausable, ReentrancyGuard {
         return _usedSettlements[_settlementDigest(matchId, winner)];
     }
 
-    /// @notice The exact digest the authorised signer must sign for a settlement.
     function settlementDigest(bytes32 matchId, address winner) external view returns (bytes32) {
         return _settlementDigest(matchId, winner);
     }
@@ -223,25 +268,16 @@ contract MathsBlitzEscrow is Ownable, Pausable, ReentrancyGuard {
         authorizedSigner = _signer;
     }
 
-    function pause() external onlyOwner {
-        _pause();
-    }
-
-    function unpause() external onlyOwner {
-        _unpause();
-    }
+    function pause() external onlyOwner { _pause(); }
+    function unpause() external onlyOwner { _unpause(); }
 
     // ─── Internal ─────────────────────────────────────────────────────────────
 
-    /**
-     * @dev Deterministic digest for a settlement claim.
-     *      Binds to contract address + chainId to prevent cross-chain/cross-contract replay.
-     */
+    // Settlement digest binds to contract address + chainId to prevent cross-chain replay.
     function _settlementDigest(bytes32 matchId, address winner) internal view returns (bytes32) {
         return keccak256(abi.encodePacked(matchId, winner, address(this), block.chainid));
     }
 
-    /// @dev Forward `amount` native CELO to `to`, reverting on failure.
     function _sendValue(address to, uint256 amount) internal {
         if (amount == 0) return;
         (bool ok, ) = payable(to).call{value: amount}("");
