@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useMatchmaking } from "../hooks/useMatchmaking";
 import { useAuth } from "../hooks/useAuth";
@@ -11,21 +11,6 @@ import { WagerStaking } from "../components/WagerStaking";
 import { WAGER_TIERS, type WagerAmount } from "../lib/gameTypes";
 import { celoToBlitz } from "../lib/currency";
 
-// ─── Animated dots ────────────────────────────────────────────────────────────
-function WaitingDots() {
-  return (
-    <span className="inline-flex gap-1" aria-hidden="true">
-      {[0, 1, 2].map((i) => (
-        <span
-          key={i}
-          className="size-2 rounded-full bg-accent animate-bounce"
-          style={{ animationDelay: `${i * 0.15}s` }}
-        />
-      ))}
-    </span>
-  );
-}
-
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function MatchmakingPage() {
   const router = useRouter();
@@ -33,42 +18,31 @@ export default function MatchmakingPage() {
   const { status: socketStatus } = useSocket();
   const { address, balance, chainName } = useWallet();
   const {
-    queueStatus,
-    selectedWager,
     matchFound,
-    joinQueue,
+    selectedWager,
+    setSelectedWager,
     leaveQueue,
     reset,
   } = useMatchmaking();
 
-  // Hold a wager selection made before socket is ready; join as soon as it connects.
-  const [pendingWager, setPendingWager] = useState<WagerAmount | null>(null);
-
+  // Navigate to game as soon as both stakes are linked (match_found fires post-linkMatch).
   const goToGame = useCallback(() => {
-    if (matchFound) {
-      router.push(`/game/${matchFound.matchId}?wager=${matchFound.wager}`);
-    }
+    if (matchFound) router.push(`/game/${matchFound.matchId}?wager=${matchFound.wager}`);
   }, [matchFound, router]);
 
   useEffect(() => {
-    if (matchFound && !matchFound.escrowEnabled) goToGame();
+    if (matchFound) goToGame();
   }, [matchFound, goToGame]);
 
-  // Auto-join once socket connects if the user already tapped a wager.
-  useEffect(() => {
-    if (socketStatus === "connected" && pendingWager !== null) {
-      joinQueue(pendingWager);
-      setPendingWager(null);
-    }
-  }, [socketStatus, pendingWager, joinQueue]);
-
   const handleWagerSelect = useCallback((w: WagerAmount) => {
-    if (socketStatus === "connected") {
-      joinQueue(w);
-    } else {
-      setPendingWager(w);
-    }
-  }, [socketStatus, joinQueue]);
+    setSelectedWager(w);
+  }, [setSelectedWager]);
+
+  const handleExit = useCallback(() => {
+    leaveQueue();
+    reset();
+    setSelectedWager(null);
+  }, [leaveQueue, reset, setSelectedWager]);
 
   // ── Not authenticated ─────────────────────────────────────────────────────
   if (!isAuthenticated) {
@@ -80,9 +54,7 @@ export default function MatchmakingPage() {
     );
   }
 
-  const isQueuing = queueStatus === "queuing";
   const isSocketReady = socketStatus === "connected";
-  const staking = matchFound?.escrowEnabled === true;
 
   const socketDotColor = isSocketReady
     ? "bg-accent"
@@ -147,21 +119,17 @@ export default function MatchmakingPage() {
           </div>
         )}
 
-        {/* Escrow staking handshake */}
-        {staking && matchFound && (
+        {/* Staking + queue UI — shown once a wager is selected */}
+        {selectedWager !== null && (
           <WagerStaking
-            key={matchFound.matchId}
-            match={matchFound}
-            onReady={goToGame}
-            onExit={() => {
-              leaveQueue();
-              reset();
-            }}
+            key={selectedWager}
+            wager={selectedWager}
+            onExit={handleExit}
           />
         )}
 
-        {/* Wager selector */}
-        {!staking && !isQueuing && (
+        {/* Wager selector — shown before a wager is picked */}
+        {selectedWager === null && (
           <>
             <div className="flex flex-col items-center gap-3 w-full max-w-sm">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -169,27 +137,22 @@ export default function MatchmakingPage() {
               </p>
               <div className="flex justify-center w-full">
                 {WAGER_TIERS.map((w) => {
-                  const isPending = pendingWager === w;
                   const isError = socketStatus === "error";
                   return (
                     <button
                       key={w}
                       onClick={() => handleWagerSelect(w)}
-                      disabled={isError}
+                      disabled={isError || !isSocketReady}
                       className={`
                         w-36 flex flex-col items-center justify-center rounded-xl border py-4 gap-0.5
                         text-sm transition cursor-pointer
-                        ${isError
+                        ${isError || !isSocketReady
                           ? "border-border text-muted-foreground opacity-40 cursor-not-allowed"
-                          : isPending
-                          ? "border-accent bg-sage-soft text-accent animate-pulse"
                           : "border-border text-foreground hover:border-accent/50 hover:bg-sage-soft hover:text-accent active:scale-95"}
                       `}
                     >
                       <span className="text-lg">{celoToBlitz(w).toLocaleString("en-US")}</span>
-                      <span className="text-[10px] text-muted-foreground">
-                        {isPending ? "…" : "Blitz"}
-                      </span>
+                      <span className="text-[10px] text-muted-foreground">Blitz</span>
                     </button>
                   );
                 })}
@@ -197,44 +160,11 @@ export default function MatchmakingPage() {
             </div>
 
             <p className="text-xs text-muted-foreground text-center max-w-xs">
-              {pendingWager
-                ? "Connecting to server — will join queue automatically."
-                : "Tap to enter the queue. You will be matched with another player at the same stake. 10 Blitz = 0.01 CELO."}
+              {!isSocketReady
+                ? "Connecting to server…"
+                : "Select a wager to stake and enter the queue. Your stake is refundable before a match is found."}
             </p>
           </>
-        )}
-
-        {/* Queuing state */}
-        {!staking && isQueuing && (
-          <div className="flex flex-col items-center gap-6 w-full max-w-sm">
-            {/* Pulse ring */}
-            <div className="relative flex items-center justify-center">
-              <div className="absolute size-28 rounded-full border-2 border-accent/20 animate-ping" />
-              <div className="absolute size-20 rounded-full border-2 border-accent/15 animate-ping [animation-delay:0.3s]" />
-              <div className="flex size-16 items-center justify-center rounded-full border-2 border-accent/40 bg-sage-soft">
-                <span className="text-2xl">⚔️</span>
-              </div>
-            </div>
-
-            <div className="flex flex-col items-center gap-2">
-              <div className="flex items-center gap-2 text-base text-foreground">
-                Finding opponent <WaitingDots />
-              </div>
-              <div className="rounded-full border border-accent/25 bg-sage-soft px-4 py-1.5 text-sm text-accent">
-                {selectedWager !== null ? celoToBlitz(selectedWager).toLocaleString("en-US") : "—"} Blitz stake
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Waiting for another player at this wager…
-              </p>
-            </div>
-
-            <button
-              onClick={leaveQueue}
-              className="w-full rounded-xl border border-border py-3 text-sm text-muted-foreground transition hover:border-foreground/30 hover:text-foreground cursor-pointer"
-            >
-              Cancel
-            </button>
-          </div>
         )}
       </main>
     </div>

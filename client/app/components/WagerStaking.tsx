@@ -2,15 +2,16 @@
 
 import { useEffect } from "react";
 import { useEscrow } from "../hooks/useEscrow";
-import type { MatchFoundPayload } from "../lib/gameTypes";
+import type { WagerAmount } from "../lib/gameTypes";
 import { celoToBlitz } from "../lib/currency";
 
 function Spinner() {
   return <div className="size-8 rounded-full border-2 border-border border-t-accent animate-spin" />;
 }
 
-function ExplorerLink({ chainId, txHash }: { chainId: number | null; txHash: string }) {
-  const base = chainId === 42220 ? "https://celoscan.io/tx/" : "https://alfajores.celoscan.io/tx/";
+function ExplorerLink({ chainId, txHash }: { chainId: number | null | undefined; txHash: string }) {
+  // TODO: migrate to mainnet — swap celoscan.io for the default when CELO_NETWORK=mainnet.
+  const base = chainId === 42220 ? "https://celoscan.io/tx/" : "https://celo-sepolia.blockscout.com/tx/";
   return (
     <a
       href={`${base}${txHash}`}
@@ -23,59 +24,60 @@ function ExplorerLink({ chainId, txHash }: { chainId: number | null; txHash: str
   );
 }
 
+/**
+ * Pre-queue staking UI. Handles the full stake → queue → opponent-search flow.
+ * The parent should navigate to the game when match_found fires.
+ */
 export function WagerStaking({
-  match,
-  onReady,
+  wager,
   onExit,
 }: {
-  match: MatchFoundPayload;
-  onReady: () => void;
+  wager: WagerAmount;
   onExit: () => void;
 }) {
-  const { phase, txHash, error, stake, cancelStake } = useEscrow(match);
-  const isCreator = match.role === "creator";
+  const { phase, txHash, error, stake, withdraw } = useEscrow(wager);
 
+  // withdrawn = stake reclaimed, auto-exit to lobby.
   useEffect(() => {
-    if (phase === "ready") onReady();
-  }, [phase, onReady]);
+    if (phase === "withdrawn") onExit();
+  }, [phase, onExit]);
 
   return (
     <div className="flex flex-col items-center gap-6 w-full max-w-sm">
       {/* Wager headline */}
       <div className="flex flex-col items-center gap-1">
-        <span className="text-xs uppercase tracking-wider text-muted-foreground">Match found — stake to play</span>
+        <span className="text-xs uppercase tracking-wider text-muted-foreground">Stake to enter queue</span>
         <div className="flex items-baseline gap-1.5">
-          <span className="text-4xl text-foreground tabular-nums">{celoToBlitz(match.wager).toLocaleString("en-US")}</span>
+          <span className="text-4xl text-foreground tabular-nums">{celoToBlitz(wager).toLocaleString("en-US")}</span>
           <span className="text-lg text-accent">Blitz</span>
         </div>
         <span className="text-xs text-muted-foreground">
-          Winner takes <span className="text-accent">95%</span> of the {celoToBlitz(match.wager * 2).toLocaleString("en-US")} Blitz pot
+          Winner takes <span className="text-accent">95%</span> of the {celoToBlitz(wager * 2).toLocaleString("en-US")} Blitz pot
         </span>
       </div>
 
       {/* State machine UI */}
       <div className="flex flex-col items-center gap-4 w-full rounded-2xl border border-border bg-card px-6 py-7">
-        {phase === "awaiting_creator" && (
+
+        {phase === "idle" || phase === "requesting" ? (
           <>
             <Spinner />
-            <p className="text-sm text-muted-foreground text-center">Waiting for opponent to open the escrow…</p>
-            <p className="text-xs text-muted-foreground text-center">You&apos;ll stake right after.</p>
+            <p className="text-sm text-muted-foreground text-center">Preparing your reservation…</p>
           </>
-        )}
+        ) : null}
 
         {phase === "ready_to_stake" && (
           <>
             <div className="flex size-12 items-center justify-center rounded-full bg-sage-soft text-2xl">💰</div>
             <p className="text-sm text-muted-foreground text-center">
-              {isCreator
-                ? `Open the match by staking ${celoToBlitz(match.wager).toLocaleString("en-US")} Blitz.`
-                : `Opponent staked. Match your ${celoToBlitz(match.wager).toLocaleString("en-US")} Blitz stake to start.`}
+              Stake {celoToBlitz(wager).toLocaleString("en-US")} Blitz to enter the queue.
+              Your stake is refundable any time before you&apos;re matched.
             </p>
             <button
               onClick={stake}
               className="w-full rounded-xl bg-primary py-3.5 text-base text-primary-foreground shadow-sm hover:opacity-90 active:scale-95 transition cursor-pointer"
             >
-              Stake {celoToBlitz(match.wager).toLocaleString("en-US")} Blitz
+              Stake {celoToBlitz(wager).toLocaleString("en-US")} Blitz
             </button>
           </>
         )}
@@ -91,51 +93,55 @@ export function WagerStaking({
           <>
             <Spinner />
             <p className="text-sm text-muted-foreground text-center">Confirming your stake on-chain…</p>
-            {txHash && <ExplorerLink chainId={match.chainId} txHash={txHash} />}
+            {txHash && <ExplorerLink chainId={null} txHash={txHash} />}
           </>
         )}
 
-        {phase === "waiting_opponent" && (
+        {phase === "queued" && (
+          <>
+            {/* Pulse ring — searching for opponent */}
+            <div className="relative flex items-center justify-center py-2">
+              <div className="absolute size-20 rounded-full border-2 border-accent/20 animate-ping" />
+              <div className="absolute size-14 rounded-full border-2 border-accent/15 animate-ping [animation-delay:0.3s]" />
+              <div className="flex size-10 items-center justify-center rounded-full border-2 border-accent/40 bg-sage-soft text-lg">⚔️</div>
+            </div>
+            <p className="text-sm text-foreground text-center">Stake locked — finding opponent…</p>
+            {txHash && <ExplorerLink chainId={null} txHash={txHash} />}
+            <button
+              onClick={withdraw}
+              className="w-full rounded-xl border border-border py-3 text-sm text-muted-foreground hover:border-foreground/25 hover:text-foreground transition cursor-pointer"
+            >
+              Leave Queue &amp; Reclaim Stake
+            </button>
+          </>
+        )}
+
+        {phase === "withdrawing" && (
           <>
             <Spinner />
-            <p className="text-sm text-muted-foreground text-center">Your stake is locked. Waiting for opponent to stake…</p>
-            {txHash && <ExplorerLink chainId={match.chainId} txHash={txHash} />}
+            <p className="text-sm text-muted-foreground text-center">Withdrawing your stake…</p>
           </>
         )}
 
-        {phase === "ready" && (
+        {phase === "error" && (
           <>
-            <div className="flex size-12 items-center justify-center rounded-full bg-sage-soft text-2xl">✅</div>
-            <p className="text-sm text-accent text-center">Both stakes locked — starting…</p>
-          </>
-        )}
-
-        {phase === "expired" && (
-          <>
-            <div className="flex size-12 items-center justify-center rounded-full bg-sand/30 text-2xl">⌛</div>
-            <p className="text-sm text-[var(--sand)] text-center">Match expired — both players didn&apos;t stake in time.</p>
-            {isCreator && txHash && (
-              <button
-                onClick={cancelStake}
-                className="w-full rounded-xl border border-border py-3 text-sm text-muted-foreground hover:border-foreground/25 hover:text-foreground transition cursor-pointer"
-              >
-                Reclaim my stake
-              </button>
-            )}
+            <div className="flex size-12 items-center justify-center rounded-full bg-destructive/10 text-2xl">⚠️</div>
+            <p className="text-sm text-destructive text-center">{error || "Something went wrong."}</p>
           </>
         )}
       </div>
 
-      {error && (
+      {error && phase !== "error" && (
         <p className="text-xs text-destructive text-center max-w-xs">{error}</p>
       )}
 
-      {(phase === "ready_to_stake" || phase === "awaiting_creator" || phase === "expired") && (
+      {/* Cancel / back button — shown before stake is locked */}
+      {(phase === "idle" || phase === "requesting" || phase === "ready_to_stake" || phase === "error") && (
         <button
           onClick={onExit}
           className="w-full rounded-xl border border-border py-3 text-sm text-muted-foreground hover:border-foreground/25 hover:text-foreground transition cursor-pointer"
         >
-          {phase === "expired" ? "Back to lobby" : "Cancel"}
+          Cancel
         </button>
       )}
     </div>

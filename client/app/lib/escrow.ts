@@ -6,83 +6,61 @@ import {
   type Address,
   type Hex,
 } from "viem";
-import { celo, celoAlfajores } from "viem/chains";
+import { celo, celoSepolia } from "viem/chains";
 
 /**
  * Client-side configuration + helpers for the MathsBlitzEscrow contract.
  *
- * The contract address and network are provided by the server in the
- * `match_found` payload, so the only build-time config needed is whether
- * escrow is enabled (derived from the server payload at runtime).
+ * Symmetric flow: both players depositStake before matchmaking, then the
+ * server calls linkMatch once opponents are found.
+ *
+ * TODO: migrate to Celo mainnet before production.
+ * To switch: set NEXT_PUBLIC_CELO_NETWORK=mainnet and redeploy the contract.
  */
 
-const NETWORK = (process.env.NEXT_PUBLIC_CELO_NETWORK || "alfajores").toLowerCase();
-export const ESCROW_CHAIN = NETWORK === "mainnet" ? celo : celoAlfajores;
+// Currently on Celo Sepolia testnet (chain 11142220).
+const NETWORK = (process.env.NEXT_PUBLIC_CELO_NETWORK || "sepolia").toLowerCase();
+export const ESCROW_CHAIN = NETWORK === "mainnet" ? celo : celoSepolia;
 
 // Minimal ABI — only the entries the client calls.
 export const ESCROW_ABI = [
   {
     type: "function",
-    name: "createMatch",
-    inputs: [{ name: "matchId", type: "bytes32" }],
+    name: "depositStake",
+    inputs: [{ name: "reservationId", type: "bytes32" }],
     outputs: [],
     stateMutability: "payable",
   },
   {
     type: "function",
-    name: "joinMatch",
-    inputs: [{ name: "matchId", type: "bytes32" }],
-    outputs: [],
-    stateMutability: "payable",
-  },
-  {
-    type: "function",
-    name: "cancelMatch",
-    inputs: [{ name: "matchId", type: "bytes32" }],
+    name: "withdrawStake",
+    inputs: [{ name: "reservationId", type: "bytes32" }],
     outputs: [],
     stateMutability: "nonpayable",
   },
-  {
-    type: "function",
-    name: "getMatch",
-    inputs: [{ name: "matchId", type: "bytes32" }],
-    outputs: [
-      {
-        name: "",
-        type: "tuple",
-        components: [
-          { name: "player1", type: "address" },
-          { name: "player2", type: "address" },
-          { name: "wager", type: "uint256" },
-          { name: "status", type: "uint8" },
-        ],
-      },
-    ],
-    stateMutability: "view",
-  },
 ] as const;
 
-/** Convert a CELO wager (e.g. 0.5) to wei. */
+/** Convert a CELO wager (e.g. 0.01) to wei. */
 export function wagerToWei(celoAmount: number): bigint {
   return parseUnits(String(celoAmount), 18);
 }
 
-/** Encode calldata for createMatch / joinMatch. */
-export function encodeStakeCall(
-  fn: "createMatch" | "joinMatch",
-  onchainMatchId: Hex
-): Hex {
-  return encodeFunctionData({ abi: ESCROW_ABI, functionName: fn, args: [onchainMatchId] });
+/** Encode calldata for depositStake(reservationId). */
+export function encodeDepositStake(reservationId: Hex): Hex {
+  return encodeFunctionData({ abi: ESCROW_ABI, functionName: "depositStake", args: [reservationId] });
 }
 
-/** Encode calldata for cancelMatch (creator reclaiming an unmatched stake). */
-export function encodeCancelCall(onchainMatchId: Hex): Hex {
-  return encodeFunctionData({ abi: ESCROW_ABI, functionName: "cancelMatch", args: [onchainMatchId] });
+/** Encode calldata for withdrawStake(reservationId) — reclaim stake while in queue. */
+export function encodeWithdrawStake(reservationId: Hex): Hex {
+  return encodeFunctionData({ abi: ESCROW_ABI, functionName: "withdrawStake", args: [reservationId] });
 }
 
 /** A read-only viem client for the configured Celo network (waits on receipts). */
 export function getPublicClient(chainId?: number) {
-  const chain = chainId === celo.id ? celo : chainId === celoAlfajores.id ? celoAlfajores : ESCROW_CHAIN;
+  const chain =
+    chainId === celo.id ? celo :
+    chainId === celoSepolia.id ? celoSepolia :
+    ESCROW_CHAIN;
   return createPublicClient({ chain, transport: http() });
 }
 

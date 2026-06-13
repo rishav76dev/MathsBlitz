@@ -2,135 +2,137 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toHex } from "viem";
+import { useSendTransaction } from "wagmi";
 import { useSocket } from "./useSocket";
 import { useWallet } from "./useWallet";
 import { useMiniPay } from "./useMiniPay";
 import {
-  encodeStakeCall,
-  encodeCancelCall,
+  encodeDepositStake,
+  encodeWithdrawStake,
   wagerToWei,
   getPublicClient,
 } from "../lib/escrow";
-import type { MatchFoundPayload } from "../lib/gameTypes";
+import type { ReservationReadyPayload } from "../lib/gameTypes";
 
 /**
- * Escrow staking lifecycle for a matched game.
+ * Pre-queue staking lifecycle.
  *
- *  creator: ready_to_stake → staking → waiting_opponent → ready
- *  joiner:  awaiting_creator → ready_to_stake → staking → confirming → ready
+ * State machine:
+ *   idle → requesting → ready_to_stake → staking → confirming → queued
+ *                                                                  ↓
+ *                                               withdrawing ← (leave queue)
+ *                                                   ↓
+ *                                               withdrawn
  *
- * `ready` means both stakes are confirmed on-chain and the server has released
- * the game — the page should navigate to the match.
+ * `queued` means the stake is confirmed on-chain and the player is in the
+ * matchmaking queue. The parent listens for match_found to navigate.
  */
 export type EscrowPhase =
-  | "awaiting_creator"
+  | "idle"
+  | "requesting"
   | "ready_to_stake"
   | "staking"
   | "confirming"
-  | "waiting_opponent"
-  | "ready"
-  | "expired"
+  | "queued"
+  | "withdrawing"
+  | "withdrawn"
   | "error";
 
 export interface UseEscrowReturn {
   phase: EscrowPhase;
   txHash: `0x${string}` | null;
   error: string | null;
-  /** Submit the role-appropriate stake transaction (createMatch / joinMatch). */
+  /** Deposit the wager on-chain. Only valid in ready_to_stake phase. */
   stake: () => Promise<void>;
-  /** Creator-only: reclaim an unmatched stake after expiry (cancelMatch). */
-  cancelStake: () => Promise<void>;
+  /** Withdraw the stake and leave the queue. Valid in queued phase. */
+  withdraw: () => Promise<void>;
 }
 
-export function useEscrow(match: MatchFoundPayload | null): UseEscrowReturn {
+export function useEscrow(wager: number | null): UseEscrowReturn {
   const { socket } = useSocket();
   const { address } = useWallet();
   const { provider } = useMiniPay();
+  const { sendTransactionAsync } = useSendTransaction();
 
-  const isCreator = match?.role === "creator";
-
-  // State resets naturally per match: the parent renders WagerStaking with a
-  // `key={match.matchId}`, so this hook remounts for each new match.
-  const [phase, setPhase] = useState<EscrowPhase>(
-    isCreator ? "ready_to_stake" : "awaiting_creator"
-  );
+  const [phase, setPhase] = useState<EscrowPhase>("idle");
   const [txHash, setTxHash] = useState<`0x${string}` | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  // ── Server escrow events ───────────────────────────────────────────────────
-  useEffect(() => {
-    if (!socket || !match) return;
-
-    const onUpdate = (p: { matchId: string; escrowStatus: string }) => {
-      if (p.matchId !== match.matchId) return;
-      // Creator has staked — the joiner may now stake.
-      if (p.escrowStatus === "open" && !isCreator) {
-        setPhase((cur) => (cur === "awaiting_creator" ? "ready_to_stake" : cur));
-      }
-    };
-    const onReady = (p: { matchId: string }) => {
-      if (p.matchId === match.matchId) setPhase("ready");
-    };
-    const onExpired = (p: { matchId: string }) => {
-      if (p.matchId === match.matchId) setPhase("expired");
-    };
-    const onError = (p: { matchId: string; message: string }) => {
-      if (p.matchId !== match.matchId) return;
-      setError(p.message);
-      // Allow a retry from a stakeable state.
-      setPhase(isCreator ? "ready_to_stake" : "ready_to_stake");
-    };
-
-    socket.on("escrow_update", onUpdate);
-    socket.on("escrow_ready", onReady);
-    socket.on("escrow_expired", onExpired);
-    socket.on("escrow_error", onError);
-    return () => {
-      socket.off("escrow_update", onUpdate);
-      socket.off("escrow_ready", onReady);
-      socket.off("escrow_expired", onExpired);
-      socket.off("escrow_error", onError);
-    };
-  }, [socket, match, isCreator]);
-
-  // Guard against double-submits.
+  const [reservation, setReservation] = useState<ReservationReadyPayload | null>(null);
   const submitting = useRef(false);
 
-  // ── Stake action ────────────────────────────────────────────────────────────
+  // ── Emit stake_and_queue when wager is set ─────────────────────────────────
+  useEffect(() => {
+    if (!socket || !wager) return;
+    setPhase("requesting");
+    setError(null);
+    setReservation(null);
+    setTxHash(null);
+    socket.emit("stake_and_queue", { wager });
+  }, [socket, wager]);
+
+  // ── Server events ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!socket) return;
+
+    const onReservationReady = (payload: ReservationReadyPayload) => {
+      setReservation(payload);
+      setPhase("ready_to_stake");
+    };
+
+    const onQueueJoined = () => {
+      setPhase("queued");
+    };
+
+    const onEscrowError = (payload: { message: string }) => {
+      setError(payload.message);
+      setPhase("error");
+    };
+
+    socket.on("reservation_ready", onReservationReady);
+    socket.on("queue_joined", onQueueJoined);
+    socket.on("escrow_error", onEscrowError);
+
+    return () => {
+      socket.off("reservation_ready", onReservationReady);
+      socket.off("queue_joined", onQueueJoined);
+      socket.off("escrow_error", onEscrowError);
+    };
+  }, [socket]);
+
+  // ── Stake ──────────────────────────────────────────────────────────────────
   const stake = useCallback(async () => {
-    if (!match || !match.escrowEnabled || !match.onchainMatchId || !match.contractAddress) return;
-    if (!provider || !address) {
-      setError("Wallet not connected.");
-      return;
-    }
-    if (submitting.current || phase !== "ready_to_stake") return;
+    if (!reservation || phase !== "ready_to_stake") return;
+    if (!address) { setError("Wallet not connected."); return; }
+    if (submitting.current) return;
 
     submitting.current = true;
     setError(null);
     setPhase("staking");
 
     try {
-      const data = encodeStakeCall(
-        isCreator ? "createMatch" : "joinMatch",
-        match.onchainMatchId
-      );
-      const value = toHex(wagerToWei(match.wager));
+      const data = encodeDepositStake(reservation.reservationId);
+      const value = wagerToWei(reservation.wager);
+      const to = reservation.contractAddress;
 
-      const hash = (await provider.request({
-        method: "eth_sendTransaction",
-        params: [{ from: address, to: match.contractAddress, value, data }],
-      })) as `0x${string}`;
+      let hash: `0x${string}`;
+      if (provider) {
+        // MiniPay in-app browser — raw EIP-1193 provider.
+        hash = (await provider.request({
+          method: "eth_sendTransaction",
+          params: [{ from: address, to, value: toHex(value), data }],
+        })) as `0x${string}`;
+      } else {
+        // Regular browser wallet (MetaMask, etc.) via wagmi.
+        hash = await sendTransactionAsync({ to, value, data });
+      }
 
       setTxHash(hash);
       setPhase("confirming");
 
-      // Wait until the stake is mined before telling the server.
-      await getPublicClient(match.chainId ?? undefined).waitForTransactionReceipt({ hash });
+      await getPublicClient(reservation.chainId).waitForTransactionReceipt({ hash });
 
-      // The creator now waits for the opponent; the joiner waits for the server
-      // to verify the now-Active match and release the game.
-      setPhase(isCreator ? "waiting_opponent" : "confirming");
-      socket?.emit("confirm_stake", { matchId: match.matchId });
+      // Tell the server the stake is mined — server verifies on-chain then enqueues.
+      socket?.emit("confirm_stake", { reservationId: reservation.reservationId });
     } catch (err: unknown) {
       const code = (err as { code?: number })?.code;
       const msg =
@@ -142,23 +144,45 @@ export function useEscrow(match: MatchFoundPayload | null): UseEscrowReturn {
     } finally {
       submitting.current = false;
     }
-  }, [match, provider, address, isCreator, phase, socket]);
+  }, [reservation, phase, address, provider, sendTransactionAsync, socket]);
 
-  // ── Cancel (creator reclaiming an unmatched stake after expiry) ──────────────
-  const cancelStake = useCallback(async () => {
-    if (!match?.onchainMatchId || !match.contractAddress || !provider || !address) return;
+  // ── Withdraw (leave queue) ─────────────────────────────────────────────────
+  const withdraw = useCallback(async () => {
+    if (!reservation || phase !== "queued") return;
+    if (!address) { setError("Wallet not connected."); return; }
+    if (submitting.current) return;
+
+    submitting.current = true;
+    setError(null);
+    setPhase("withdrawing");
+
     try {
-      const data = encodeCancelCall(match.onchainMatchId);
-      const hash = (await provider.request({
-        method: "eth_sendTransaction",
-        params: [{ from: address, to: match.contractAddress, data }],
-      })) as `0x${string}`;
-      setTxHash(hash);
-      await getPublicClient(match.chainId ?? undefined).waitForTransactionReceipt({ hash });
-    } catch (err: unknown) {
-      setError((err as Error)?.message || "Cancel failed.");
-    }
-  }, [match, provider, address]);
+      const data = encodeWithdrawStake(reservation.reservationId);
+      const to = reservation.contractAddress;
 
-  return { phase, txHash, error, stake, cancelStake };
+      let hash: `0x${string}`;
+      if (provider) {
+        hash = (await provider.request({
+          method: "eth_sendTransaction",
+          params: [{ from: address, to, data }],
+        })) as `0x${string}`;
+      } else {
+        hash = await sendTransactionAsync({ to, data });
+      }
+
+      setTxHash(hash);
+      await getPublicClient(reservation.chainId).waitForTransactionReceipt({ hash });
+
+      socket?.emit("leave_queue");
+      setPhase("withdrawn");
+    } catch (err: unknown) {
+      const msg = (err as Error)?.message || "Withdraw failed.";
+      setError(msg);
+      setPhase("queued"); // allow retry
+    } finally {
+      submitting.current = false;
+    }
+  }, [reservation, phase, address, provider, sendTransactionAsync, socket]);
+
+  return { phase, txHash, error, stake, withdraw };
 }

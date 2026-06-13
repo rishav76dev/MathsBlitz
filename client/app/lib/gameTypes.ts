@@ -20,17 +20,27 @@ export interface QueueLeftPayload {
   // empty
 }
 
-export type EscrowRole = "creator" | "joiner";
+/**
+ * Sent by the server when a player's stake_and_queue request is accepted.
+ * The client calls depositStake(reservationId) on-chain, then emits confirm_stake.
+ */
+export interface ReservationReadyPayload {
+  reservationId: `0x${string}`;
+  contractAddress: `0x${string}`;
+  chainId: number;
+  wager: number;
+}
 
+/**
+ * Sent once BOTH players are matched AND their reservations have been linked
+ * on-chain by the server. The game starts immediately after this event.
+ */
 export interface MatchFoundPayload {
   matchId: string;
   opponentAddress: string;
   wager: number;
-  /** Whether this match requires an on-chain stake before play. */
   escrowEnabled: boolean;
-  /** This player's role in the escrow handshake. */
-  role: EscrowRole;
-  /** bytes32 matchId for the escrow contract (null when escrow disabled). */
+  /** bytes32 matchId used on-chain (null when escrow disabled). */
   onchainMatchId: `0x${string}` | null;
   /** Deployed escrow contract address (null when escrow disabled). */
   contractAddress: `0x${string}` | null;
@@ -38,24 +48,7 @@ export interface MatchFoundPayload {
   chainId: number | null;
 }
 
-// ── Escrow handshake events ───────────────────────────────────────────────────
-export type EscrowStatus = "open" | "active";
-
-export interface EscrowUpdatePayload {
-  matchId: string;
-  escrowStatus: EscrowStatus;
-}
-
-export interface EscrowReadyPayload {
-  matchId: string;
-}
-
-export interface EscrowExpiredPayload {
-  matchId: string;
-}
-
 export interface EscrowErrorPayload {
-  matchId: string;
   message: string;
 }
 
@@ -96,6 +89,10 @@ export interface OpponentDisconnectedPayload {
 }
 
 // ─── Client → Server event payloads ──────────────────────────────────────────
+export interface StakeAndQueuePayload {
+  wager: WagerAmount;
+}
+
 export interface JoinQueuePayload {
   wager: WagerAmount;
 }
@@ -107,13 +104,14 @@ export interface SubmitAnswerPayload {
 }
 
 export interface ConfirmStakePayload {
-  matchId: string;
+  reservationId: `0x${string}`;
 }
 
 // ─── Game state ───────────────────────────────────────────────────────────────
 export type QueueStatus =
   | "idle"
-  | "queuing"
+  | "staking"  // pre-queue staking in progress
+  | "queuing"  // staked and in queue, waiting for opponent
   | "matched";
 
 export type GamePhase =

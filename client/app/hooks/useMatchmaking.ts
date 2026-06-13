@@ -8,14 +8,15 @@ export interface UseMatchmakingReturn {
   queueStatus: QueueStatus;
   selectedWager: WagerAmount | null;
   matchFound: MatchFoundPayload | null;
-  joinQueue: (wager: WagerAmount) => void;
+  setSelectedWager: (wager: WagerAmount | null) => void;
   leaveQueue: () => void;
   reset: () => void;
 }
 
 /**
- * Handles the pre-game matchmaking flow.
- * Emits join_queue / leave_queue and listens for queue_joined, queue_left, match_found.
+ * Handles the matchmaking flow.
+ * Wager selection and pre-queue staking are managed by WagerStaking/useEscrow.
+ * This hook tracks queue status and surfaces match_found for navigation.
  */
 export function useMatchmaking(): UseMatchmakingReturn {
   const { socket } = useSocket();
@@ -44,15 +45,11 @@ export function useMatchmaking(): UseMatchmakingReturn {
     };
   }, [socket]);
 
-  const joinQueue = useCallback((wager: WagerAmount) => {
-    if (!socket?.connected) return;
-    setSelectedWager(wager);
-    socket.emit("join_queue", { wager });
-  }, [socket]);
-
   const leaveQueue = useCallback(() => {
     if (!socket?.connected) return;
     socket.emit("leave_queue");
+    setQueueStatus("idle");
+    setSelectedWager(null);
   }, [socket]);
 
   const reset = useCallback(() => {
@@ -61,5 +58,5 @@ export function useMatchmaking(): UseMatchmakingReturn {
     setMatchFound(null);
   }, []);
 
-  return { queueStatus, selectedWager, matchFound, joinQueue, leaveQueue, reset };
+  return { queueStatus, selectedWager, matchFound, setSelectedWager, leaveQueue, reset };
 }
