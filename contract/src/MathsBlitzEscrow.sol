@@ -219,6 +219,25 @@ contract MathsBlitzEscrow is Ownable, Pausable, ReentrancyGuard {
     }
 
     /**
+     * @notice Refund both players when a game ends in a draw.
+     *         Called by the authorised backend signer — no manual owner action needed.
+     */
+    function refundDraw(bytes32 matchId) external nonReentrant onlyAuthorizedSigner {
+        Match storage m = _matches[matchId];
+        if (m.status != MatchStatus.Active) revert MatchNotActive(matchId);
+
+        address p1 = m.player1;
+        address p2 = m.player2;
+        uint256 wager = m.wager;
+        m.status = MatchStatus.Cancelled;
+
+        _sendValue(p1, wager);
+        _sendValue(p2, wager);
+
+        emit MatchCancelled(matchId);
+    }
+
+    /**
      * @notice Emergency: cancel an active match and refund both players. Owner only.
      */
     function cancelMatch(bytes32 matchId) external nonReentrant onlyOwner {
