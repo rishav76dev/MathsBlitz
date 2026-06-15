@@ -48,6 +48,20 @@ export interface MatchFoundPayload {
   chainId: number | null;
 }
 
+export interface EscrowUpdatePayload {
+  matchId: string;
+  escrowStatus: "open" | "active" | "settled" | "cancelled";
+}
+
+export interface EscrowReadyPayload {
+  matchId: string;
+}
+
+export interface EscrowExpiredPayload {
+  matchId: string;
+  reason?: string;
+}
+
 export interface EscrowErrorPayload {
   message: string;
 }

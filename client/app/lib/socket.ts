@@ -41,6 +41,7 @@ interface ClientToServerEvents {
   leave_queue: () => void;
   confirm_stake: (payload: ConfirmStakePayload) => void;
   submit_answer: (payload: SubmitAnswerPayload) => void;
+  skip_question: (payload: { matchId: string; questionId: string }) => void;
 }
 
 export type GameSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
