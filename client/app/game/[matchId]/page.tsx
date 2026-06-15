@@ -67,10 +67,11 @@ function ScoreCard({ label, score, isWinner }: { label: string; score: number; i
 }
 
 // ─── Number Pad ───────────────────────────────────────────────────────────────
-function NumberPad({ value, onChange, onSubmit }: {
+function NumberPad({ value, onChange, onSubmit, onSkip }: {
   value: string;
   onChange: (v: string) => void;
   onSubmit: () => void;
+  onSkip: () => void;
 }) {
   const keys = ["7","8","9","4","5","6","1","2","3","-","0","⌫"];
 
@@ -117,6 +118,14 @@ function NumberPad({ value, onChange, onSubmit }: {
           </button>
         ))}
       </div>
+
+      {/* Skip */}
+      <button
+        onClick={onSkip}
+        className="w-full rounded-xl border border-border bg-surface py-3 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition active:scale-95 cursor-pointer"
+      >
+        Skip question
+      </button>
     </div>
   );
 }
@@ -247,6 +256,7 @@ export default function GamePage({ params }: { params: Promise<{ matchId: string
     opponentDisconnected,
     settlement,
     submitAnswer,
+    skipQuestion,
   } = useGame(matchId, wager);
 
   const [inputValue, setInputValue] = useState("");
@@ -265,6 +275,33 @@ export default function GamePage({ params }: { params: Promise<{ matchId: string
     submitAnswer(num);
     setInputValue("");
   };
+
+  const handleSkip = () => {
+    skipQuestion();
+    setInputValue("");
+  };
+
+  // Keyboard support
+  useEffect(() => {
+    if (phase !== "playing") return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key >= "0" && e.key <= "9") {
+        setInputValue((v) => v.length >= 6 ? v : v + e.key);
+      } else if (e.key === "-") {
+        setInputValue((v) => v.startsWith("-") ? v.slice(1) : "-" + v);
+      } else if (e.key === "Backspace") {
+        setInputValue((v) => v.slice(0, -1));
+      } else if (e.key === "Enter") {
+        const num = parseInt(inputValue, 10);
+        if (!isNaN(num)) {
+          submitAnswer(num);
+          setInputValue("");
+        }
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [phase, inputValue, submitAnswer]);
 
   // ── Waiting for game_started ──────────────────────────────────────────────
   if (phase === "waiting") {
@@ -299,7 +336,7 @@ export default function GamePage({ params }: { params: Promise<{ matchId: string
 
   // ── Active game ───────────────────────────────────────────────────────────
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground select-none">
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
       {/* Top bar */}
       <div className="flex items-center justify-between border-b border-border px-4 py-2">
         <div className="flex flex-col">
@@ -358,6 +395,7 @@ export default function GamePage({ params }: { params: Promise<{ matchId: string
           value={inputValue}
           onChange={setInputValue}
           onSubmit={handleSubmit}
+          onSkip={handleSkip}
         />
       </div>
     </div>
