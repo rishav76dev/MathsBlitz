@@ -153,5 +153,12 @@ export function useGame(matchId: string, wager: number) {
     [socket, matchId, state.currentQuestion]
   );
 
-  return { ...state, submitAnswer };
+  // ── Skip question ─────────────────────────────────────────────────────────
+  const skipQuestion = useCallback(() => {
+    const q = state.currentQuestion;
+    if (!socket?.connected || !q || !matchId) return;
+    socket.emit("skip_question", { matchId, questionId: q.id });
+  }, [socket, matchId, state.currentQuestion]);
+
+  return { ...state, submitAnswer, skipQuestion };
 }
