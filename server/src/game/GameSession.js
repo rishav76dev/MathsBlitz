@@ -3,7 +3,6 @@ const { MatchRepository, UserRepository } = require("../repositories");
 const { SettlementService } = require("../services/SettlementService");
 
 const MATCH_DURATION_MS = 30_000; // 30 seconds — blitz format
-const QUESTION_INTERVAL_MS = 6_000; // new question every 6s
 
 /**
  * Manages a single live match between two players.
@@ -31,8 +30,11 @@ class GameSession {
       [player2.userId]: 0,
     };
 
-    // Current question (server-side, includes answer)
-    this._currentQuestion = null;
+    // Per-player current question (server-side, includes answer)
+    this._currentQuestions = {
+      [player1.userId]: null,
+      [player2.userId]: null,
+    };
 
     // Per-player set of questionIds already answered (replay attack prevention)
     this._answered = {
@@ -43,7 +45,6 @@ class GameSession {
     this._startedAt = null;
     this._elapsed = 0; // seconds
     this._matchTimer = null;
-    this._questionTimer = null;
     this._started = false;
     this._ended = false;
 
@@ -80,17 +81,12 @@ class GameSession {
       },
     });
 
-    // Send first question
-    this._sendNewQuestion();
+    // Send each player their own first question
+    this._sendNewQuestionToPlayer(player1.userId);
+    this._sendNewQuestionToPlayer(player2.userId);
 
     // Tick every second for elapsed time tracking
     this._matchTimer = setInterval(() => this._tick(), 1000);
-
-    // Auto-advance question every interval
-    this._questionTimer = setInterval(
-      () => this._sendNewQuestion(),
-      QUESTION_INTERVAL_MS
-    );
 
     // End match after 30 seconds
     setTimeout(() => this._endMatch(), MATCH_DURATION_MS);
@@ -106,7 +102,7 @@ class GameSession {
   handleAnswer(userId, questionId, answer) {
     if (this._ended) return { correct: false, score: this.scores[userId] ?? 0 };
 
-    const q = this._currentQuestion;
+    const q = this._currentQuestions[userId];
     if (!q || q.id !== questionId) {
       return { correct: false, score: this.scores[userId] ?? 0 };
     }
@@ -128,14 +124,9 @@ class GameSession {
       scores: { ...this.scores },
     });
 
-    // On correct answer, immediately send next question
+    // On correct answer, advance only this player to their next question
     if (correct) {
-      clearInterval(this._questionTimer);
-      this._sendNewQuestion();
-      this._questionTimer = setInterval(
-        () => this._sendNewQuestion(),
-        QUESTION_INTERVAL_MS
-      );
+      this._sendNewQuestionToPlayer(userId);
     }
 
     return { correct, score: this.scores[userId] };
@@ -160,18 +151,39 @@ class GameSession {
     this._elapsed += 1;
   }
 
-  _sendNewQuestion() {
+  /**
+   * Send a fresh question to a single player via their socket.
+   * @param {string} userId
+   */
+  _sendNewQuestionToPlayer(userId) {
     const q = generate(this._elapsed);
-    this._currentQuestion = q;
+    this._currentQuestions[userId] = q;
 
-    // Strip answer before broadcasting
+    const playerInfo =
+      userId === this.player1.userId ? this.player1 : this.player2;
+    const targetSocket = this.io.sockets.sockets.get(playerInfo.socketId);
+
     const { answer: _answer, ...clientQuestion } = q;
-    void _answer; // suppress unused-var lint
+    void _answer;
 
-    this.io.to(this.roomId).emit("new_question", {
-      matchId: this.matchId,
-      question: clientQuestion,
-    });
+    if (targetSocket) {
+      targetSocket.emit("new_question", {
+        matchId: this.matchId,
+        question: clientQuestion,
+      });
+    }
+  }
+
+  /**
+   * Handle a skip request — advance this player to a new question without scoring.
+   * @param {string} userId
+   * @param {string} questionId - must match the player's current question
+   */
+  handleSkip(userId, questionId) {
+    if (this._ended) return;
+    const q = this._currentQuestions[userId];
+    if (!q || q.id !== questionId) return;
+    this._sendNewQuestionToPlayer(userId);
   }
 
   async _endMatch(forcedWinnerId = null) {
