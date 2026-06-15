@@ -76,6 +76,14 @@ function registerGameHandlers(socket, io) {
     session.handleAnswer(userId, questionId, Number(answer));
   });
 
+  // ── skip_question ─────────────────────────────────────────────────────────
+  socket.on("skip_question", ({ matchId, questionId } = {}) => {
+    if (!matchId || !questionId) return;
+    const session = gameSessionManager.getSession(matchId);
+    if (!session) return;
+    session.handleSkip(userId, questionId);
+  });
+
   // ── disconnect ────────────────────────────────────────────────────────────
   socket.on("disconnect", (reason) => {
     console.log(`[Socket] ${userId} disconnected: ${reason}`);
