@@ -44,8 +44,11 @@ export default function MatchmakingPage() {
   if (!isAuthenticated) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-4">
-        <div className="flex size-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-          <RiFlashlightFill size={32} />
+        <div
+          className="flex size-16 items-center justify-center rounded-2xl bg-prosperity border-2 border-border"
+          style={{ boxShadow: "4px 4px 0 #2D6A4F" }}
+        >
+          <RiFlashlightFill size={32} className="text-foreground" />
         </div>
         <h1 className="font-display text-2xl font-bold text-foreground">Connect your wallet to play</h1>
         <ConnectWalletButton />
@@ -65,7 +68,7 @@ export default function MatchmakingPage() {
     ? "text-accent"
     : socketStatus === "error"
     ? "text-destructive"
-    : "text-[var(--sand)] animate-pulse";
+    : "text-sand animate-pulse";
 
   const socketLabel = isSocketReady ? "Ready" : socketStatus === "error" ? "Error" : "Connecting…";
 
@@ -73,33 +76,48 @@ export default function MatchmakingPage() {
     <div className="flex min-h-screen flex-col bg-background text-foreground">
 
       {/* Header */}
-      <header className="flex h-14 items-center justify-between border-b border-border px-4 glass">
+      <header
+        className="flex h-14 items-center justify-between border-b-2 border-border px-4"
+        style={{ background: "#FCFF52" }}
+      >
         <button
           onClick={() => router.push("/")}
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition cursor-pointer"
+          className="inline-flex items-center gap-1 text-sm font-semibold transition cursor-pointer"
+          style={{ color: "#2D6A4F" }}
         >
           <RiArrowLeftSLine size={18} />
           Back
         </button>
 
-        <span className="font-display text-sm font-bold text-foreground tracking-tight">
-          Find a Match
-        </span>
+        <div className="flex items-center gap-2">
+          <span
+            className="font-display text-sm font-bold tracking-tight"
+            style={{ color: "#2D6A4F" }}
+          >
+            Find a Match
+          </span>
+          {/* Page indicator pill */}
+          <span
+            className="font-mono-game text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border-2 border-border hidden sm:inline"
+            style={{ background: "#2D6A4F", color: "#FCFF52" }}
+          >
+            Matchmaking
+          </span>
+        </div>
 
         <div className="flex items-center gap-3">
           {address && (
             <div className="hidden sm:flex items-center gap-1.5">
-              <span className="size-1.5 rounded-full bg-accent shadow-[0_0_4px_var(--color-accent)]" />
-              <span className="font-mono-game text-xs text-muted-foreground">
+              <span className="size-1.5 rounded-full bg-accent" />
+              <span className="font-mono-game text-xs" style={{ color: "#2D6A4F", opacity: 0.8 }}>
                 {address.slice(0, 6)}…{address.slice(-4)}
-                {chainName ? ` · ${chainName}` : ""}
                 {balance ? ` · ${parseFloat(balance).toFixed(2)} CELO` : ""}
               </span>
             </div>
           )}
           <div className="flex items-center gap-1.5">
             <SocketIcon size={13} className={socketColor} />
-            <span className="text-xs text-muted-foreground">{socketLabel}</span>
+            <span className="text-xs font-semibold" style={{ color: "#2D6A4F", opacity: 0.8 }}>{socketLabel}</span>
           </div>
         </div>
       </header>
@@ -109,19 +127,24 @@ export default function MatchmakingPage() {
 
         {/* User info card */}
         {user && (
-          <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-5 py-3">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <RiFlashlightFill size={18} />
+          <div
+            className="flex items-center gap-3 neo-card px-5 py-3"
+          >
+            <div
+              className="flex size-10 items-center justify-center rounded-xl bg-prosperity border-2 border-border"
+              style={{ boxShadow: "2px 2px 0 #2D6A4F" }}
+            >
+              <RiFlashlightFill size={18} className="text-foreground" />
             </div>
             <div>
               <p className="text-sm font-semibold text-foreground">
                 {user.username ?? `${user.walletAddress.slice(0, 6)}…${user.walletAddress.slice(-4)}`}
               </p>
               <div className="flex items-center gap-2 mt-0.5">
-                <span className="inline-flex items-center gap-1 text-[11px] text-accent">
+                <span className="inline-flex items-center gap-1 text-[11px] text-accent font-semibold">
                   <RiTrophyFill size={10} />{user.wins}W
                 </span>
-                <span className="inline-flex items-center gap-1 text-[11px] text-destructive">
+                <span className="inline-flex items-center gap-1 text-[11px] text-destructive font-semibold">
                   <RiCloseLine size={10} />{user.losses}L
                 </span>
                 <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
@@ -141,7 +164,7 @@ export default function MatchmakingPage() {
         {selectedWager === null && (
           <>
             <div className="flex flex-col items-center gap-4 w-full max-w-sm">
-              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+              <p className="font-mono-game text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                 Select Wager
               </p>
               <div className="grid grid-cols-2 gap-3 w-full">
@@ -154,17 +177,17 @@ export default function MatchmakingPage() {
                       onClick={() => handleWagerSelect(w)}
                       disabled={disabled}
                       className={`
-                        flex flex-col items-center justify-center rounded-2xl border py-5 gap-1
+                        flex flex-col items-center justify-center rounded-2xl border-2 py-5 gap-1
                         transition cursor-pointer
                         ${disabled
-                          ? "border-border text-muted-foreground opacity-40 cursor-not-allowed"
-                          : "border-border bg-card text-foreground hover:border-primary/40 hover:bg-surface active:scale-95"}
+                          ? "border-border/30 text-muted-foreground opacity-40 cursor-not-allowed bg-muted"
+                          : "neo-card hover:-translate-y-1"}
                       `}
                     >
                       <span className="font-display text-2xl font-bold text-primary">
                         {celoToBlitz(w).toLocaleString("en-US")}
                       </span>
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <span className="font-mono-game text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                         Blitz
                       </span>
                     </button>
