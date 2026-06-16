@@ -28,7 +28,7 @@ export function useMatchmaking(): UseMatchmakingReturn {
     if (!socket) return;
 
     const onQueueJoined = () => setQueueStatus("queuing");
-    const onQueueLeft = () => { setQueueStatus("idle"); setSelectedWager(null); };
+    const onQueueLeft = () => { setQueueStatus("idle"); };
     const onMatchFound = (payload: MatchFoundPayload) => {
       setQueueStatus("matched");
       setMatchFound(payload);
