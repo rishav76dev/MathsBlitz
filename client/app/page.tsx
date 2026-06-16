@@ -74,7 +74,7 @@ export default function Home() {
               id="play-now-btn"
               className="inline-flex items-center gap-2.5 rounded-xl bg-primary px-9 py-4 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:-translate-y-0.5 hover:shadow-primary/30 active:scale-95"
             >
-              <RiFlaskFill size={18} />
+              <RiFlashlightFill size={18} />
               Play Now
             </Link>
           ) : (
