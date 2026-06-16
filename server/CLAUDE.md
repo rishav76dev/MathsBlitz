@@ -36,10 +36,10 @@ If `ESCROW_CONTRACT_ADDRESS` or `SETTLEMENT_PRIVATE_KEY` are absent, `ESCROW_ENA
 
 **Socket.IO** (`src/socket/`):
 - `socketServer.js` — JWT auth middleware, presence map (`userId → socketId`), delegates to `gameHandlers.js`
-- `gameHandlers.js` — handles `join_queue`, `leave_queue`, `confirm_stake`, `submit_answer`, `disconnect`
+- `gameHandlers.js` — handles `stake_and_queue`, `join_queue` (escrow-disabled redirect), `leave_queue`, `confirm_stake`, `submit_answer`, `skip_question`, `disconnect`
 
 **Matchmaking** (`src/game/QueueManager.js`):
-- In-memory queues keyed by wager tier (0.5 / 1 / 2 / 5 CELO).
+- In-memory queues keyed by wager tier (`VALID_WAGERS = [0.01]` CELO).
 - On 2 players in same tier, calls `GameSessionManager.createSession`.
 
 **Session lifecycle** (`src/game/GameSessionManager.js`):
@@ -57,7 +57,11 @@ If `ESCROW_CONTRACT_ADDRESS` or `SETTLEMENT_PRIVATE_KEY` are absent, `ESCROW_ENA
 **Settlement** (`src/services/SettlementService.js`):
 - Triple guard against double-settlement: in-memory `_inFlight` set, DB `settlement.status`, on-chain status check.
 - Signs `keccak256(encodePacked(matchId, winner, contractAddress, chainId))` with the settlement account, then submits `settleMatch` and waits for receipt.
-- Draws are skipped (`skipped_draw`); funds remain escrowed for owner-level resolution.
+- Draws: calls `refundDraw(onchainMatchId)` via the server wallet — both players get their full wager back, no user action needed.
+
+**Queue leave / disconnect** (`src/socket/gameHandlers.js`):
+- When a queued player emits `leave_queue` or disconnects, `QueueManager.dequeue` returns the queue entry (including `reservationId`).
+- If escrow is enabled, `gameHandlers` fires `serverWithdrawStake(reservationId)` on-chain using the server wallet (fire-and-forget). The player's stake is returned to their wallet without requiring a second user-signed transaction.
 
 **Chain clients** (`src/chain/config.js`):
 - Lazily creates viem `publicClient` and `walletClient` on first use.

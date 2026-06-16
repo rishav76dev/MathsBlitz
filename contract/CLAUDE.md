@@ -25,14 +25,19 @@ PRIVATE_KEY=0x... TREASURY_ADDRESS=0x... AUTHORIZED_SIGNER=0x... \
 
 Single contract (`src/MathsBlitzEscrow.sol`). Inherits `Ownable`, `Pausable`, `ReentrancyGuard` from OpenZeppelin.
 
-**Lifecycle**: `NonExistent → Open → Active → Settled | Cancelled`
+**Lifecycle**: `NonExistent → Active → Settled | Cancelled`
+
+Reservations are created by players via `depositStake` before matching. The server links two reservations into a match with `linkMatch`.
 
 | Function | Who | Effect |
 |---|---|---|
-| `createMatch(matchId)` | player1 | Opens match, locks wager in CELO |
-| `joinMatch(matchId)` | player2 | Matches exact wager, moves to Active |
+| `depositStake(reservationId)` | player | Locks wager in CELO, creates a Reservation |
+| `withdrawStake(reservationId)` | player (only) | Reclaims unlinked stake — requires user tx |
+| `serverWithdrawStake(reservationId)` | backend signer | Reclaims unlinked stake on player's behalf (no user tx needed — used when player leaves the queue) |
+| `linkMatch(matchId, reservA, reservB)` | backend signer | Links two reservations into an Active match |
 | `settleMatch(matchId, winner, sig)` | backend signer (or owner) | Pays 95% to winner, 5% to treasury |
-| `cancelMatch(matchId)` | player1 or owner | Refunds player1's stake (Open only) |
+| `refundDraw(matchId)` | backend signer | Refunds both players in full when the game ends in a draw |
+| `cancelMatch(matchId)` | owner | Emergency refund of an Active match |
 
 **Settlement signature**: the backend must sign `keccak256(abi.encodePacked(matchId, winner, address(this), block.chainid))` and the contract wraps it with `MessageHashUtils.toEthSignedMessageHash` before ECDSA recovery. Replay protection uses `_usedSettlements[digest]`.
 

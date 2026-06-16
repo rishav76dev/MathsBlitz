@@ -44,10 +44,15 @@ NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=...
 - `useSocket` exposes `socket` and `isConnected`.
 
 **Escrow hook** (`useEscrow`):
-- Drives the full staking lifecycle for a matched game.
-- State machine: `awaiting_creator → ready_to_stake → staking → confirming → waiting_opponent → ready` (creator) or `awaiting_creator → ready_to_stake → staking → confirming → ready` (joiner).
-- Calls `encodeStakeCall` from `lib/escrow.ts` to ABI-encode `createMatch` / `joinMatch`, then sends via MiniPay provider.
-- After tx mines, emits `confirm_stake` to server.
+- Drives the pre-queue staking lifecycle.
+- State machine: `idle → requesting → ready_to_stake → staking → confirming → queued → withdrawing → withdrawn | error`.
+- `stake()`: ABI-encodes `depositStake(reservationId)`, sends via MiniPay or wagmi, waits for receipt, emits `confirm_stake`.
+- `withdraw()`: emits `leave_queue` — no user transaction required. The server calls `serverWithdrawStake` on the contract using its own wallet key, and the player's stake is returned automatically. The hook transitions to `withdrawn` on the `queue_left` server event.
+
+**Matchmaking hook** (`useMatchmaking`):
+- Tracks queue/match state independently of staking.
+- Exposes: `queueStatus` (`"idle" | "queuing" | "matched"`), `selectedWager`, `matchFound`, `setSelectedWager`, `leaveQueue`, `reset`.
+- Listens for `queue_joined`, `queue_left`, `match_found` to update `queueStatus` and surface `matchFound` for navigation.
 
 **Game hook** (`useGame`):
 - Listens for `game_started`, `new_question`, `score_update`, `game_ended`, `settlement_update`.
@@ -55,8 +60,7 @@ NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=...
 
 **Escrow utilities** (`lib/escrow.ts`):
 - `wagerToWei`: converts CELO amount (number) → bigint wei using integer milli-CELO arithmetic (avoids float drift).
-- `encodeStakeCall`: ABI-encodes `createMatch(bytes32)` or `joinMatch(bytes32)`.
-- `encodeCancelCall`: ABI-encodes `cancelMatch(bytes32)` for creator refund.
+- `encodeDepositStake`: ABI-encodes `depositStake(bytes32)`.
 - `getPublicClient(chainId)`: returns a viem public client for receipt polling.
 
 ## Pages
