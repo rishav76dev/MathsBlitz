@@ -1,12 +1,5 @@
 @import "tailwindcss";
-
-@font-face {
-    font-family: "Instrument Serif";
-    font-weight: 400;
-    font-display: swap;
-    src: url("https://fonts.gstatic.com/s/instrumentserif/v5/jizHRFtNs2ka5fXjeivQ4LroWlx-6zAjgn7MsNo.woff2")
-        format("woff2");
-}
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400..800&display=swap");
 
 @theme inline {
     --radius-sm: calc(var(--radius) - 4px);
@@ -41,45 +34,53 @@
     --color-input: var(--input);
     --color-ring: var(--ring);
 
-    --font-display: "Instrument Serif", Georgia, "Times New Roman", serif;
-    --font-sans: "Instrument Serif", Georgia, "Times New Roman", serif;
-    --tracking-tight: 0;
-    --tracking-tighter: 0;
+    --font-display: "Syne", system-ui, sans-serif;
+    --font-sans: "Space Grotesk", system-ui, sans-serif;
+    --font-mono: "Space Mono", monospace;
+    --tracking-tight: -0.02em;
+    --tracking-tighter: -0.03em;
 }
 
 :root {
-    --radius: 1.5rem;
+    --radius: 0.875rem;
 
-  --background: oklch(0.982 0.006 95);
-  --surface: oklch(0.952 0.01 92);
-  --foreground: oklch(0.2 0.015 235);
-  --muted: oklch(0.94 0.01 92);
-  --muted-foreground: oklch(0.48 0.02 235);
+    /* ── Base surfaces ───────────────────────────── */
+    --background: oklch(0.085 0.016 258);
+    --surface:    oklch(0.115 0.02 258);
+    --foreground: oklch(0.96 0.007 258);
+    --muted:      oklch(0.155 0.02 258);
+    --muted-foreground: oklch(0.48 0.018 258);
 
-  --sage: oklch(0.58 0.075 152);
-  --sage-soft: oklch(0.9 0.04 152);
-  --sand: oklch(0.84 0.05 78);
+    /* ── Gold primary — "Blitz" CTA ─────────────── */
+    --primary:            oklch(0.82 0.185 72);
+    --primary-foreground: oklch(0.1 0.03 72);
 
-  --card: oklch(0.995 0.003 95);
-  --card-foreground: var(--foreground);
-  --popover: var(--card);
-  --popover-foreground: var(--foreground);
+    /* ── Electric green — success / accent ─────── */
+    --sage:      oklch(0.68 0.19 148);
+    --sage-soft: oklch(0.14 0.05 148);
 
-  --primary: var(--foreground);
-  --primary-foreground: oklch(0.985 0.004 95);
+    /* ── Warm amber — warnings / sand ──────────── */
+    --sand: oklch(0.78 0.14 72);
 
-  --secondary: var(--surface);
-  --secondary-foreground: var(--foreground);
+    /* ── Cards ───────────────────────────────────── */
+    --card:            oklch(0.12 0.018 258);
+    --card-foreground: var(--foreground);
+    --popover:         var(--card);
+    --popover-foreground: var(--foreground);
 
-  --accent: var(--sage);
-  --accent-foreground: oklch(0.985 0.004 95);
+    /* ── Semantic aliases ────────────────────────── */
+    --secondary:            var(--surface);
+    --secondary-foreground: var(--foreground);
 
-  --destructive: oklch(0.58 0.22 28);
-  --destructive-foreground: oklch(0.985 0.004 95);
+    --accent:            var(--sage);
+    --accent-foreground: oklch(0.96 0.007 258);
 
-  --border: oklch(0.88 0.014 92);
-  --input: oklch(0.88 0.014 92);
-  --ring: var(--sage);
+    --destructive:            oklch(0.62 0.24 27);
+    --destructive-foreground: oklch(0.98 0.005 27);
+
+    --border: oklch(0.22 0.025 258);
+    --input:  oklch(0.2 0.022 258);
+    --ring:   var(--primary);
 }
 
 @layer base {
@@ -98,7 +99,6 @@
         background-color: var(--color-background);
         color: var(--color-foreground);
         font-family: var(--font-sans);
-        font-feature-settings: "ss01", "cv11";
         -webkit-font-smoothing: antialiased;
         text-rendering: optimizeLegibility;
     }
@@ -108,35 +108,46 @@
         text-decoration: none;
     }
 
-    h1,
-    h2,
-    h3 {
+    h1, h2, h3 {
         font-family: var(--font-display);
-        font-weight: 400;
-        letter-spacing: 0;
+        font-weight: 700;
+        letter-spacing: -0.02em;
     }
 }
 
 @layer utilities {
-    .instrument-serif {
-        font-family: "Instrument Serif", Georgia, "Times New Roman", serif;
-        font-weight: 400;
-        font-synthesis: none;
+    .font-display {
+        font-family: "Syne", system-ui, sans-serif;
     }
 
+    .font-mono-game {
+        font-family: "Space Mono", monospace;
+    }
+
+    /* Dark glass card */
     .glass {
-        background: color-mix(in oklab, var(--background) 72%, transparent);
-        backdrop-filter: blur(20px) saturate(140%);
-        -webkit-backdrop-filter: blur(20px) saturate(140%);
-        border: 1px solid color-mix(in oklab, var(--foreground) 7%, transparent);
+        background: color-mix(in oklab, var(--background) 80%, transparent);
+        backdrop-filter: blur(20px) saturate(150%);
+        -webkit-backdrop-filter: blur(20px) saturate(150%);
+        border: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
     }
 
+    /* Subtle dot grain */
     .grain {
         background-image: radial-gradient(
-            color-mix(in oklab, var(--foreground) 4%, transparent) 1px,
+            color-mix(in oklab, var(--foreground) 3%, transparent) 1px,
             transparent 1px
         );
         background-size: 3px 3px;
+    }
+
+    /* Gold glow on focus / hover */
+    .glow-primary {
+        box-shadow: 0 0 0 1px var(--color-primary), 0 0 20px oklch(0.82 0.185 72 / 0.25);
+    }
+
+    .glow-accent {
+        box-shadow: 0 0 0 1px var(--color-accent), 0 0 20px oklch(0.68 0.19 148 / 0.25);
     }
 
     .scrollbar-none {
