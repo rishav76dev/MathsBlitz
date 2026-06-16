@@ -40,15 +40,12 @@ function TimerRing({ timeLeft, total = 60 }: { timeLeft: number; total?: number 
     <div className="relative flex items-center justify-center">
       <svg width="112" height="112" viewBox="0 0 112 112" className="-rotate-90">
         <circle cx="56" cy="56" r={radius} fill="none"
-          stroke="oklch(0.22 0.025 258)" strokeWidth="7" />
+          stroke="#2D6A4F30" strokeWidth="7" />
         <circle cx="56" cy="56" r={radius} fill="none"
-          stroke={isUrgent ? "oklch(0.62 0.24 27)" : "oklch(0.82 0.185 72)"}
+          stroke={isUrgent ? "#C93625" : "#2D6A4F"}
           strokeWidth="7" strokeLinecap="round"
           strokeDasharray={circ} strokeDashoffset={offset}
           className="transition-all duration-1000"
-          style={{ filter: isUrgent
-            ? "drop-shadow(0 0 6px oklch(0.62 0.24 27 / 0.7))"
-            : "drop-shadow(0 0 6px oklch(0.82 0.185 72 / 0.6))" }}
         />
       </svg>
       <div className="absolute flex flex-col items-center gap-0.5">
@@ -64,15 +61,14 @@ function TimerRing({ timeLeft, total = 60 }: { timeLeft: number; total?: number 
 // ─── Score Card ───────────────────────────────────────────────────────────────
 function ScoreCard({ label, score, isWinner }: { label: string; score: number; isWinner?: boolean }) {
   return (
-    <div className={`flex flex-col items-center rounded-2xl border px-6 py-4 min-w-20 transition
-      ${isWinner
-        ? "border-accent/40 bg-accent/10 shadow-[0_0_16px_oklch(0.68_0.19_148/0.15)]"
-        : "border-border bg-card"}`}
+    <div
+      className={`flex flex-col items-center rounded-2xl border-2 border-border px-6 py-4 min-w-20 transition bg-card`}
+      style={isWinner ? { boxShadow: "4px 4px 0 #2D8653", borderColor: "#2D8653" } : { boxShadow: "3px 3px 0 #2D6A4F" }}
     >
       <span className={`font-display text-4xl font-extrabold tabular-nums ${isWinner ? "text-accent" : "text-foreground"}`}>
         {score}
       </span>
-      <span className="mt-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{label}</span>
+      <span className="mt-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</span>
       {isWinner && (
         <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-accent">
           <RiTrophyFill size={10} /> WIN
@@ -106,7 +102,7 @@ function NumberPad({ value, onChange, onSubmit, onSkip }: {
   return (
     <div className="flex flex-col gap-3 w-full max-w-xs">
       {/* Answer display + submit */}
-      <div className="flex items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3">
+      <div className="flex items-center gap-2 rounded-2xl border-2 border-border bg-card px-4 py-3" style={{ boxShadow: "3px 3px 0 #2D6A4F" }}>
         <span className="font-mono-game text-2xl tabular-nums text-foreground min-w-15 flex-1">
           {value || <span className="text-muted-foreground">—</span>}
         </span>
@@ -114,7 +110,7 @@ function NumberPad({ value, onChange, onSubmit, onSkip }: {
           id="submit-answer-btn"
           onClick={onSubmit}
           disabled={!canSubmit}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/20 disabled:opacity-40 disabled:cursor-not-allowed transition hover:opacity-90 active:scale-95 cursor-pointer"
+          className="neo-btn-primary inline-flex items-center gap-1.5 px-4 py-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
         >
           <RiCheckFill size={14} />
           Submit
@@ -127,13 +123,7 @@ function NumberPad({ value, onChange, onSubmit, onSkip }: {
           <button
             key={k}
             onClick={() => handleKey(k)}
-            className={`rounded-2xl py-4 font-mono-game text-xl font-bold transition active:scale-95 cursor-pointer
-              ${k === "⌫"
-                ? "bg-surface border border-border text-muted-foreground hover:text-foreground hover:border-foreground/20"
-                : k === "-"
-                ? "bg-surface border border-border text-primary hover:bg-primary/10"
-                : "bg-surface border border-border text-foreground hover:bg-muted hover:border-foreground/15"
-              }`}
+            className="neo-btn-ghost rounded-2xl py-4 font-mono-game text-xl font-bold"
           >
             {k === "⌫" ? <RiDeleteBackFill className="mx-auto" size={20} /> : k}
           </button>
@@ -143,7 +133,7 @@ function NumberPad({ value, onChange, onSubmit, onSkip }: {
       {/* Skip */}
       <button
         onClick={onSkip}
-        className="inline-flex items-center justify-center gap-2 w-full rounded-2xl border border-border bg-surface py-3 text-sm text-muted-foreground hover:text-foreground hover:border-foreground/20 transition active:scale-95 cursor-pointer"
+        className="neo-btn-ghost inline-flex items-center justify-center gap-2 w-full py-3 text-sm text-muted-foreground"
       >
         <RiSkipForwardFill size={15} />
         Skip question
@@ -237,7 +227,7 @@ function EndScreen({ winner, myUserId, myScore, opponentScore, wager, matchId, s
 
   return (
     <div className="flex flex-col items-center gap-6 py-12 px-4 text-center min-h-screen justify-center">
-      <div className={`flex size-24 items-center justify-center rounded-3xl ${resultConfig.bg} ${resultConfig.iconColor}`}>
+      <div className={`flex size-24 items-center justify-center rounded-3xl border-2 border-border ${resultConfig.bg} ${resultConfig.iconColor}`} style={{ boxShadow: "4px 4px 0 #2D6A4F" }}>
         <ResultIcon size={44} />
       </div>
 
@@ -255,7 +245,7 @@ function EndScreen({ winner, myUserId, myScore, opponentScore, wager, matchId, s
         <ScoreCard label="Them" score={opponentScore} isWinner={!iWon && !isDraw} />
       </div>
 
-      <div className="rounded-xl border border-border bg-card px-5 py-3 text-sm text-muted-foreground">
+      <div className="rounded-xl border-2 border-border bg-card px-5 py-3 text-sm text-muted-foreground" style={{ boxShadow: "3px 3px 0 #2D6A4F" }}>
         Wager:{" "}
         <span className="font-semibold text-primary">
           {celoToBlitz(wager).toLocaleString("en-US")} Blitz
@@ -267,7 +257,7 @@ function EndScreen({ winner, myUserId, myScore, opponentScore, wager, matchId, s
       <button
         id="play-again-btn"
         onClick={onRematch}
-        className="inline-flex items-center gap-2 w-full max-w-xs justify-center rounded-2xl bg-primary py-4 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:opacity-95 transition active:scale-95 cursor-pointer"
+        className="neo-btn-primary inline-flex items-center gap-2 w-full max-w-xs justify-center py-4 text-base"
       >
         <RiFlashlightFill size={18} />
         Play Again
@@ -345,8 +335,8 @@ export default function GamePage({ params }: { params: Promise<{ matchId: string
   if (phase === "waiting") {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-5 bg-background">
-        <div className="flex size-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-          <RiLoader4Line size={30} className="animate-spin" />
+        <div className="flex size-16 items-center justify-center rounded-2xl bg-prosperity border-2 border-border" style={{ boxShadow: "4px 4px 0 #2D6A4F" }}>
+          <RiLoader4Line size={30} className="animate-spin text-foreground" />
         </div>
         <div className="flex flex-col items-center gap-1.5 text-center">
           <p className="font-display text-lg font-bold text-foreground">Starting match…</p>
@@ -393,20 +383,20 @@ export default function GamePage({ params }: { params: Promise<{ matchId: string
     <div className="flex min-h-screen flex-col bg-background text-foreground">
 
       {/* Top bar */}
-      <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
+      <div className="flex items-center justify-between border-b-2 border-border px-4 py-3" style={{ background: "#FCFF52" }}>
         <div className="flex flex-col">
-          <span className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">You</span>
-          <span className="font-mono-game text-xs text-foreground">
+          <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "#2D6A4F", opacity: 0.7 }}>You</span>
+          <span className="font-mono-game text-xs font-semibold" style={{ color: "#2D6A4F" }}>
             {user ? truncateAddr(user.walletAddress) : "—"}
           </span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="size-1.5 rounded-full bg-primary shadow-[0_0_4px_var(--color-primary)]" />
-          <span className="font-display text-xs font-bold text-foreground">LIVE</span>
+          <div className="size-2 rounded-full animate-pulse border border-border" style={{ background: "#2D6A4F" }} />
+          <span className="font-display text-xs font-bold" style={{ color: "#2D6A4F" }}>LIVE</span>
         </div>
         <div className="flex flex-col items-end">
-          <span className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">Opponent</span>
-          <span className="font-mono-game text-xs text-foreground">
+          <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "#2D6A4F", opacity: 0.7 }}>Opponent</span>
+          <span className="font-mono-game text-xs font-semibold" style={{ color: "#2D6A4F" }}>
             {opponentAddress ? truncateAddr(opponentAddress) : "—"}
           </span>
         </div>
@@ -430,7 +420,7 @@ export default function GamePage({ params }: { params: Promise<{ matchId: string
         </div>
 
         {/* Question card */}
-        <div className="w-full max-w-sm rounded-2xl border border-border bg-card px-6 py-8 text-center">
+        <div className="w-full max-w-sm rounded-2xl border-2 border-border bg-card px-6 py-8 text-center" style={{ boxShadow: "4px 4px 0 #2D6A4F" }}>
           {currentQuestion ? (
             <>
               <div className="mb-3 flex items-center justify-center gap-1.5">
