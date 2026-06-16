@@ -57,11 +57,7 @@ If `ESCROW_CONTRACT_ADDRESS` or `SETTLEMENT_PRIVATE_KEY` are absent, `ESCROW_ENA
 **Settlement** (`src/services/SettlementService.js`):
 - Triple guard against double-settlement: in-memory `_inFlight` set, DB `settlement.status`, on-chain status check.
 - Signs `keccak256(encodePacked(matchId, winner, contractAddress, chainId))` with the settlement account, then submits `settleMatch` and waits for receipt.
-- Draws: calls `refundDraw(onchainMatchId)` via the server wallet — both players get their full wager back, no user action needed.
-
-**Queue leave / disconnect** (`src/socket/gameHandlers.js`):
-- When a queued player emits `leave_queue` or disconnects, `QueueManager.dequeue` returns the queue entry (including `reservationId`).
-- If escrow is enabled, `gameHandlers` fires `serverWithdrawStake(reservationId)` on-chain using the server wallet (fire-and-forget). The player's stake is returned to their wallet without requiring a second user-signed transaction.
+- Draws are skipped (`skipped_draw`); funds remain escrowed for owner-level resolution.
 
 **Chain clients** (`src/chain/config.js`):
 - Lazily creates viem `publicClient` and `walletClient` on first use.

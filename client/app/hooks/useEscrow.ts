@@ -8,6 +8,7 @@ import { useWallet } from "./useWallet";
 import { useMiniPay } from "./useMiniPay";
 import {
   encodeDepositStake,
+  encodeWithdrawStake,
   wagerToWei,
   getPublicClient,
 } from "../lib/escrow";
@@ -43,8 +44,8 @@ export interface UseEscrowReturn {
   error: string | null;
   /** Deposit the wager on-chain. Only valid in ready_to_stake phase. */
   stake: () => Promise<void>;
-  /** Signal the server to leave the queue and reclaim stake. Valid in queued phase. */
-  withdraw: () => void;
+  /** Withdraw the stake and leave the queue. Valid in queued phase. */
+  withdraw: () => Promise<void>;
 }
 
 export function useEscrow(wager: number | null): UseEscrowReturn {
@@ -82,10 +83,6 @@ export function useEscrow(wager: number | null): UseEscrowReturn {
       setPhase("queued");
     };
 
-    const onQueueLeft = () => {
-      setPhase("withdrawn");
-    };
-
     const onEscrowError = (payload: { message: string }) => {
       setError(payload.message);
       setPhase("error");
@@ -93,13 +90,11 @@ export function useEscrow(wager: number | null): UseEscrowReturn {
 
     socket.on("reservation_ready", onReservationReady);
     socket.on("queue_joined", onQueueJoined);
-    socket.on("queue_left", onQueueLeft);
     socket.on("escrow_error", onEscrowError);
 
     return () => {
       socket.off("reservation_ready", onReservationReady);
       socket.off("queue_joined", onQueueJoined);
-      socket.off("queue_left", onQueueLeft);
       socket.off("escrow_error", onEscrowError);
     };
   }, [socket]);
@@ -152,15 +147,42 @@ export function useEscrow(wager: number | null): UseEscrowReturn {
   }, [reservation, phase, address, provider, sendTransactionAsync, socket]);
 
   // ── Withdraw (leave queue) ─────────────────────────────────────────────────
-  // The server calls serverWithdrawStake on-chain on behalf of the player, so
-  // no user-signed transaction is required. We just tell the server to dequeue
-  // us and wait for the queue_left event to confirm.
-  const withdraw = useCallback(() => {
-    if (phase !== "queued") return;
+  const withdraw = useCallback(async () => {
+    if (!reservation || phase !== "queued") return;
+    if (!address) { setError("Wallet not connected."); return; }
+    if (submitting.current) return;
+
+    submitting.current = true;
     setError(null);
     setPhase("withdrawing");
-    socket?.emit("leave_queue");
-  }, [phase, socket]);
+
+    try {
+      const data = encodeWithdrawStake(reservation.reservationId);
+      const to = reservation.contractAddress;
+
+      let hash: `0x${string}`;
+      if (provider) {
+        hash = (await provider.request({
+          method: "eth_sendTransaction",
+          params: [{ from: address, to, data }],
+        })) as `0x${string}`;
+      } else {
+        hash = await sendTransactionAsync({ to, data });
+      }
+
+      setTxHash(hash);
+      await getPublicClient(reservation.chainId).waitForTransactionReceipt({ hash });
+
+      socket?.emit("leave_queue");
+      setPhase("withdrawn");
+    } catch (err: unknown) {
+      const msg = (err as Error)?.message || "Withdraw failed.";
+      setError(msg);
+      setPhase("queued"); // allow retry
+    } finally {
+      submitting.current = false;
+    }
+  }, [reservation, phase, address, provider, sendTransactionAsync, socket]);
 
   return { phase, txHash, error, stake, withdraw };
 }

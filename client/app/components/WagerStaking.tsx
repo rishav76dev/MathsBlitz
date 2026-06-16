@@ -11,8 +11,6 @@ import {
   RiSwordFill,
   RiAlertFill,
   RiArrowLeftSLine,
-  RiWalletFill,
-  RiCheckLine,
 } from "react-icons/ri";
 
 function Spinner() {
@@ -38,9 +36,7 @@ export function WagerStaking({ wager, onExit }: { wager: WagerAmount; onExit: ()
   const { phase, txHash, error, stake, withdraw } = useEscrow(wager);
 
   useEffect(() => {
-    if (phase !== "withdrawn") return;
-    const t = setTimeout(onExit, 4000);
-    return () => clearTimeout(t);
+    if (phase === "withdrawn") onExit();
   }, [phase, onExit]);
 
   const blitzAmount = celoToBlitz(wager).toLocaleString("en-US");
@@ -142,27 +138,6 @@ export function WagerStaking({ wager, onExit }: { wager: WagerAmount; onExit: ()
           <>
             <Spinner />
             <p className="text-sm text-muted-foreground text-center">Withdrawing your stake…</p>
-          </>
-        )}
-
-        {phase === "withdrawn" && (
-          <>
-            <div
-              className="flex size-14 items-center justify-center rounded-2xl border-2 border-border"
-              style={{ background: "#FCFF52", boxShadow: "3px 3px 0 #2D6A4F" }}
-            >
-              <RiWalletFill size={28} className="text-foreground" />
-            </div>
-            <div className="flex flex-col items-center gap-1 text-center">
-              <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest" style={{ color: "#2D6A4F" }}>
-                <RiCheckLine size={13} />
-                Stake returned
-              </span>
-              <p className="text-sm text-foreground font-semibold">
-                {blitzAmount} Blitz sent to your wallet
-              </p>
-              <p className="text-xs text-muted-foreground">You&apos;re back in the lobby.</p>
-            </div>
           </>
         )}
 

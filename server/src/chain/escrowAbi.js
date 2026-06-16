@@ -114,13 +114,6 @@ const ESCROW_ABI = [
   },
   {
     type: "function",
-    name: "serverWithdrawStake",
-    inputs: [{ name: "reservationId", type: "bytes32" }],
-    outputs: [],
-    stateMutability: "nonpayable",
-  },
-  {
-    type: "function",
     name: "refundDraw",
     inputs: [{ name: "matchId", type: "bytes32" }],
     outputs: [],

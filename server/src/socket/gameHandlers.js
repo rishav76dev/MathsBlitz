@@ -1,40 +1,6 @@
 const { QueueManager, VALID_WAGERS } = require("../game/QueueManager");
 const { gameSessionManager } = require("../game/GameSessionManager");
-const {
-  ESCROW_ENABLED,
-  CONTRACT_ADDRESS,
-  getWalletClient,
-} = require("../chain/config");
-const { ESCROW_ABI } = require("../chain/escrowAbi");
-
-/**
- * If escrow is enabled and the dequeued entry has a reservationId, call
- * serverWithdrawStake on-chain so the player's stake is returned without
- * requiring a second user-signed transaction.
- * Fire-and-forget — the player is already removed from the queue.
- * @param {{ reservationId?: string, walletAddress?: string } | null} entry
- */
-function _serverWithdrawIfNeeded(entry) {
-  if (!ESCROW_ENABLED || !entry?.reservationId) return;
-  getWalletClient()
-    .writeContract({
-      address: CONTRACT_ADDRESS,
-      abi: ESCROW_ABI,
-      functionName: "serverWithdrawStake",
-      args: [entry.reservationId],
-    })
-    .then((txHash) => {
-      console.log(
-        `[Escrow] serverWithdrawStake submitted for ${entry.reservationId} (tx: ${txHash})`
-      );
-    })
-    .catch((err) => {
-      console.error(
-        `[Escrow] serverWithdrawStake failed for ${entry.reservationId}:`,
-        err.shortMessage || err.message
-      );
-    });
-}
+const { ESCROW_ENABLED } = require("../chain/config");
 
 /**
  * Register all game-related socket event handlers on an authenticated socket.
@@ -86,8 +52,7 @@ function registerGameHandlers(socket, io) {
 
   // ── leave_queue ───────────────────────────────────────────────────────────
   socket.on("leave_queue", () => {
-    const entry = QueueManager.dequeue(userId, io);
-    _serverWithdrawIfNeeded(entry);
+    QueueManager.dequeue(userId, io);
   });
 
   // ── confirm_stake ─────────────────────────────────────────────────────────
@@ -122,8 +87,7 @@ function registerGameHandlers(socket, io) {
   // ── disconnect ────────────────────────────────────────────────────────────
   socket.on("disconnect", (reason) => {
     console.log(`[Socket] ${userId} disconnected: ${reason}`);
-    const entry = QueueManager.dequeue(userId, io);
-    _serverWithdrawIfNeeded(entry);
+    QueueManager.dequeue(userId, io);
     gameSessionManager.handleDisconnect(userId);
   });
 }

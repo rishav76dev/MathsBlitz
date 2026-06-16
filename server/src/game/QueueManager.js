@@ -45,22 +45,23 @@ const QueueManager = {
 
   /**
    * Remove a player from the queue.
-   * Returns the removed queue entry (including reservationId) or null if not found.
    * @param {string} userId
    * @param {import("socket.io").Server} io
-   * @returns {{ userId: string, socketId: string, walletAddress: string, reservationId: string, joinedAt: number } | null}
    */
   dequeue(userId, io) {
     const wager = playerWagerIndex.get(userId);
-    if (wager === undefined) return null;
+    if (wager === undefined) return;
 
     const queue = queues.get(wager);
     const idx = queue.findIndex((e) => e.userId === userId);
-    const entry = idx !== -1 ? queue[idx] : null;
     if (idx !== -1) queue.splice(idx, 1);
     playerWagerIndex.delete(userId);
 
     // Notify the player
+    const socket = io.sockets.sockets.get(
+      queue[idx]?.socketId ?? "" // may already be gone
+    );
+    // Find socket directly
     const allSockets = io.sockets.sockets;
     for (const [, s] of allSockets) {
       if (s.userId === userId) {
@@ -69,11 +70,7 @@ const QueueManager = {
       }
     }
 
-    const display = entry?.walletAddress
-      ? `${entry.walletAddress.slice(0, 6)}…${entry.walletAddress.slice(-4)}`
-      : userId;
-    console.log(`[Queue] ${display} left ${wager} CELO queue`);
-    return entry;
+    console.log(`[Queue] ${userId} left ${wager} CELO queue`);
   },
 
   /**
