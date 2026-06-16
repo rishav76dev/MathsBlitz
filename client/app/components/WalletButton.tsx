@@ -30,7 +30,10 @@ export function WalletButton({ size = "md" }: { size?: "sm" | "md" }) {
           return (
             <button
               onClick={openConnectModal}
-              className={`inline-flex items-center gap-2 rounded-lg bg-primary ${pad} text-primary-foreground shadow-sm transition hover:opacity-90 hover:-translate-y-px`}
+              className={`inline-flex items-center gap-2 rounded-lg font-bold border-2 border-border cursor-pointer transition ${pad}`}
+              style={{ background: "#2D6A4F", color: "#FCFF52", boxShadow: "3px 3px 0 #1A1E1B" }}
+              onMouseEnter={e => { e.currentTarget.style.transform = "translate(-1px,-1px)"; e.currentTarget.style.boxShadow = "4px 4px 0 #1A1E1B"; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = "3px 3px 0 #1A1E1B"; }}
             >
               Connect Wallet
             </button>
@@ -41,7 +44,8 @@ export function WalletButton({ size = "md" }: { size?: "sm" | "md" }) {
           return (
             <button
               onClick={() => switchChain({ chainId: CELO_CHAIN_ID })}
-              className={`rounded-lg bg-destructive/90 ${pad} text-destructive-foreground transition hover:bg-destructive`}
+              className={`inline-flex items-center rounded-lg font-bold border-2 border-border cursor-pointer ${pad}`}
+              style={{ background: "#C93625", color: "#fff", boxShadow: "3px 3px 0 #1A1E1B" }}
             >
               Switch to Celo
             </button>
@@ -51,9 +55,10 @@ export function WalletButton({ size = "md" }: { size?: "sm" | "md" }) {
         return (
           <button
             onClick={openAccountModal}
-            className={`glass flex items-center gap-2 rounded-full ${pad} text-foreground transition hover:border-accent/50`}
+            className={`inline-flex items-center gap-2 rounded-lg font-semibold border-2 border-border cursor-pointer ${pad}`}
+            style={{ background: "#2D6A4F22", color: "#2D6A4F" }}
           >
-            <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
+            <span className="h-2 w-2 rounded-full bg-accent" />
             {account.displayName}
           </button>
         );
