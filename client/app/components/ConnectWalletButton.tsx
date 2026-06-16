@@ -3,16 +3,7 @@
 import { useWallet } from "../hooks/useWallet";
 import { useAuth } from "../hooks/useAuth";
 import { WalletButton } from "./WalletButton";
-
-function SpinnerIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
-      aria-hidden="true" className="animate-spin">
-      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-    </svg>
-  );
-}
+import { RiLoader4Line, RiWallet3Fill, RiShieldCheckFill } from "react-icons/ri";
 
 function truncateAddress(address: string) {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
@@ -24,33 +15,35 @@ export function ConnectWalletButton() {
 
   const handleLogout = () => { logout(); disconnect(); };
 
-  // ── Fully authenticated ────────────────────────────────────────────────────
   if (isConnected && isAuthenticated) {
     return (
       <div className="flex items-center gap-2">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-sage-soft border border-accent/25 px-3 py-1 text-xs text-accent">
-          ● Connected
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-accent/10 border border-accent/20 px-3 py-1 text-xs text-accent font-medium">
+          <RiShieldCheckFill size={12} />
+          Connected
         </span>
-        <span className="font-mono text-xs text-muted-foreground" title={address!}>
+        <span className="font-mono-game text-xs text-muted-foreground hidden sm:inline" title={address!}>
           {truncateAddress(address!)}
         </span>
-        <button id="disconnect-btn" onClick={handleLogout}
-          className="rounded-md border border-border bg-transparent px-3 py-1.5 text-xs text-muted-foreground transition hover:border-foreground/30 hover:text-foreground cursor-pointer">
+        <button
+          id="disconnect-btn"
+          onClick={handleLogout}
+          className="rounded-lg border border-border bg-transparent px-3 py-1.5 text-xs text-muted-foreground transition hover:border-foreground/25 hover:text-foreground cursor-pointer"
+        >
           Disconnect
         </button>
       </div>
     );
   }
 
-  // ── Connected, loading auth ────────────────────────────────────────────────
   if (isConnected && status === "loading") {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full bg-surface border border-border px-3 py-1.5 text-xs text-muted-foreground">
-        <SpinnerIcon />Connecting…
+        <RiLoader4Line size={14} className="animate-spin" />
+        Connecting…
       </span>
     );
   }
 
-  // ── Not connected ─────────────────────────────────────────────────────────
   return <WalletButton />;
 }
