@@ -25,7 +25,7 @@ export default function MatchmakingPage() {
   const router = useRouter();
   const { isAuthenticated, user } = useAuth();
   const { status: socketStatus } = useSocket();
-  const { address, balance, chainName } = useWallet();
+  const { address, balance } = useWallet();
   const { matchFound, selectedWager, setSelectedWager, leaveQueue, reset } = useMatchmaking();
 
   const goToGame = useCallback(() => {
@@ -101,7 +101,7 @@ export default function MatchmakingPage() {
             className="font-mono-game text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border-2 border-border hidden sm:inline"
             style={{ background: "#2D6A4F", color: "#FCFF52" }}
           >
-            Matchmaking
+            Join the Arena
           </span>
         </div>
 
@@ -167,7 +167,9 @@ export default function MatchmakingPage() {
               <p className="font-mono-game text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                 Select Wager
               </p>
+
               <div className="grid grid-cols-2 gap-3 w-full">
+                {/* Live tiers */}
                 {WAGER_TIERS.map((w) => {
                   const isError = socketStatus === "error";
                   const disabled = isError || !isSocketReady;
@@ -193,6 +195,41 @@ export default function MatchmakingPage() {
                     </button>
                   );
                 })}
+
+                {/* Upcoming tiers — shown as locked */}
+                {([0.5, 1, 2, 5] as const).map((w) => (
+                  <div
+                    key={w}
+                    className="relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed py-5 gap-1 select-none overflow-hidden"
+                    style={{ borderColor: "#2D6A4F44", background: "#F5F0E6" }}
+                  >
+                    <span className="font-display text-2xl font-bold" style={{ color: "#2D6A4F55" }}>
+                      {celoToBlitz(w).toLocaleString("en-US")}
+                    </span>
+                    <span className="font-mono-game text-[10px] font-bold uppercase tracking-wider" style={{ color: "#2D6A4F55" }}>
+                      Blitz
+                    </span>
+                    {/* "Expanding soon" badge */}
+                    <span
+                      className="absolute top-2 right-2 font-mono-game text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
+                      style={{ background: "#2D6A4F", color: "#FCFF52" }}
+                    >
+                      Soon
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Expansion note */}
+              <div
+                className="w-full rounded-xl border-2 px-4 py-3 flex items-start gap-2.5"
+                style={{ borderColor: "#2D6A4F33", background: "#2D6A4F0C" }}
+              >
+                <span className="text-lg leading-none mt-0.5">🌱</span>
+                <p className="text-xs leading-relaxed" style={{ color: "#2D6A4F" }}>
+                  Higher wager tiers unlock as the arena grows. Early players get first
+                  access — the circle widens with every match played.
+                </p>
               </div>
             </div>
 
