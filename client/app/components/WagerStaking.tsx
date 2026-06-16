@@ -47,24 +47,24 @@ export function WagerStaking({ wager, onExit }: { wager: WagerAmount; onExit: ()
 
       {/* Wager headline */}
       <div className="flex flex-col items-center gap-1 text-center">
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+        <span className="font-mono-game text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
           Stake to enter queue
         </span>
         <div className="flex items-baseline gap-1.5">
           <span className="font-display text-5xl font-extrabold text-foreground tabular-nums">
             {blitzAmount}
           </span>
-          <span className="text-xl text-primary font-semibold">Blitz</span>
+          <span className="text-xl text-primary font-bold">Blitz</span>
         </div>
         <span className="text-xs text-muted-foreground">
           Winner takes{" "}
-          <span className="text-primary font-medium">95%</span> of the{" "}
-          <span className="text-foreground">{potAmount} Blitz</span> pot
+          <span className="text-primary font-semibold">95%</span> of the{" "}
+          <span className="text-foreground font-medium">{potAmount} Blitz</span> pot
         </span>
       </div>
 
       {/* State machine card */}
-      <div className="flex flex-col items-center gap-4 w-full rounded-2xl border border-border bg-card px-6 py-7">
+      <div className="neo-card flex flex-col items-center gap-4 w-full px-6 py-7">
 
         {(phase === "idle" || phase === "requesting") && (
           <>
@@ -75,8 +75,11 @@ export function WagerStaking({ wager, onExit }: { wager: WagerAmount; onExit: ()
 
         {phase === "ready_to_stake" && (
           <>
-            <div className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <RiCoinsFill size={28} />
+            <div
+              className="flex size-14 items-center justify-center rounded-2xl bg-prosperity border-2 border-border"
+              style={{ boxShadow: "3px 3px 0 #2D6A4F" }}
+            >
+              <RiCoinsFill size={28} className="text-foreground" />
             </div>
             <p className="text-sm text-muted-foreground text-center leading-relaxed">
               Stake {blitzAmount} Blitz to enter the queue.
@@ -84,7 +87,7 @@ export function WagerStaking({ wager, onExit }: { wager: WagerAmount; onExit: ()
             </p>
             <button
               onClick={stake}
-              className="w-full rounded-xl bg-primary py-3.5 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-primary/30 active:scale-95 transition cursor-pointer"
+              className="neo-btn-primary w-full py-3.5 text-base"
             >
               Stake {blitzAmount} Blitz
             </button>
@@ -109,19 +112,22 @@ export function WagerStaking({ wager, onExit }: { wager: WagerAmount; onExit: ()
         {phase === "queued" && (
           <>
             <div className="relative flex items-center justify-center py-3">
-              <div className="absolute size-20 rounded-full border border-primary/20 animate-ping" />
-              <div className="absolute size-14 rounded-full border border-primary/15 animate-ping [animation-delay:0.35s]" />
-              <div className="flex size-11 items-center justify-center rounded-full border border-primary/40 bg-primary/10 text-primary">
-                <RiSwordFill size={22} />
+              <div className="absolute size-20 rounded-full border-2 border-primary/25 animate-ping" />
+              <div className="absolute size-14 rounded-full border-2 border-primary/20 animate-ping [animation-delay:0.35s]" />
+              <div
+                className="flex size-11 items-center justify-center rounded-full bg-prosperity border-2 border-border"
+                style={{ boxShadow: "3px 3px 0 #2D6A4F" }}
+              >
+                <RiSwordFill size={22} className="text-foreground" />
               </div>
             </div>
-            <p className="text-sm font-medium text-foreground text-center">
+            <p className="text-sm font-semibold text-foreground text-center">
               Stake locked — finding opponent…
             </p>
             {txHash && <ExplorerLink chainId={null} txHash={txHash} />}
             <button
               onClick={withdraw}
-              className="w-full rounded-xl border border-border py-3 text-sm text-muted-foreground hover:border-foreground/25 hover:text-foreground transition cursor-pointer"
+              className="neo-btn-ghost w-full py-3 text-sm"
             >
               Leave Queue &amp; Reclaim Stake
             </button>
@@ -137,7 +143,7 @@ export function WagerStaking({ wager, onExit }: { wager: WagerAmount; onExit: ()
 
         {phase === "error" && (
           <>
-            <div className="flex size-14 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
+            <div className="flex size-14 items-center justify-center rounded-2xl bg-destructive/10 text-destructive border-2 border-destructive/30">
               <RiAlertFill size={28} />
             </div>
             <p className="text-sm text-destructive text-center">{error || "Something went wrong."}</p>
@@ -152,7 +158,7 @@ export function WagerStaking({ wager, onExit }: { wager: WagerAmount; onExit: ()
       {(phase === "idle" || phase === "requesting" || phase === "ready_to_stake" || phase === "error") && (
         <button
           onClick={onExit}
-          className="inline-flex items-center gap-1 w-full justify-center rounded-xl border border-border py-3 text-sm text-muted-foreground hover:border-foreground/25 hover:text-foreground transition cursor-pointer"
+          className="neo-btn-ghost inline-flex items-center gap-1 w-full justify-center py-3 text-sm"
         >
           <RiArrowLeftSLine size={16} />
           Cancel
