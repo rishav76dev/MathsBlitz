@@ -23,6 +23,9 @@ import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
  * 3. server calls  settleMatch(matchId, winner, sig)            → pot distributed
  *
  * Player can call withdrawStake(reservationId) at any time before linkMatch.
+ * The authorised backend signer can call serverWithdrawStake(reservationId) on behalf
+ * of the player (e.g. when they leave the matchmaking queue), so no second user
+ * transaction is required.
  */
 contract MathsBlitzEscrow is Ownable, Pausable, ReentrancyGuard {
     using ECDSA for bytes32;
@@ -135,6 +138,26 @@ contract MathsBlitzEscrow is Ownable, Pausable, ReentrancyGuard {
         if (r.player == address(0)) revert ReservationNotFound(reservationId);
         if (r.linked) revert ReservationAlreadyLinked(reservationId);
         if (r.player != msg.sender) revert NotAuthorized();
+
+        uint256 amount = r.amount;
+        address player = r.player;
+        delete _reservations[reservationId];
+
+        _sendValue(player, amount);
+        emit StakeWithdrawn(reservationId, player, amount);
+    }
+
+    /**
+     * @notice Reclaim an unlinked stake on behalf of the depositing player.
+     *         Called by the authorised backend signer when a player leaves the
+     *         matchmaking queue, so the player does not need to sign a second
+     *         transaction.
+     * @param reservationId The reservation to withdraw.
+     */
+    function serverWithdrawStake(bytes32 reservationId) external nonReentrant onlyAuthorizedSigner {
+        Reservation storage r = _reservations[reservationId];
+        if (r.player == address(0)) revert ReservationNotFound(reservationId);
+        if (r.linked) revert ReservationAlreadyLinked(reservationId);
 
         uint256 amount = r.amount;
         address player = r.player;
