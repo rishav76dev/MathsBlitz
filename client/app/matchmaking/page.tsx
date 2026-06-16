@@ -197,7 +197,7 @@ export default function MatchmakingPage() {
                 })}
 
                 {/* Upcoming tiers — shown as locked */}
-                {([0.5, 1, 2, 5] as const).map((w) => (
+                {([0.05, 0.1, 0.2, 0.5] as const).map((w) => (
                   <div
                     key={w}
                     className="relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed py-5 gap-1 select-none overflow-hidden"
