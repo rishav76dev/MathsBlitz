@@ -18,17 +18,23 @@ export function ConnectWalletButton() {
   if (isConnected && isAuthenticated) {
     return (
       <div className="flex items-center gap-2">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-accent/10 border border-accent/20 px-3 py-1 text-xs text-accent font-medium">
+        <span
+          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold border-2 border-border"
+          style={{ background: "#2D6A4F", color: "#FCFF52" }}
+        >
           <RiShieldCheckFill size={12} />
           Connected
         </span>
-        <span className="font-mono-game text-xs text-muted-foreground hidden sm:inline" title={address!}>
+        <span className="font-mono-game text-xs hidden sm:inline" style={{ color: "#2D6A4F" }} title={address!}>
           {truncateAddress(address!)}
         </span>
         <button
           id="disconnect-btn"
           onClick={handleLogout}
-          className="rounded-lg border border-border bg-transparent px-3 py-1.5 text-xs text-muted-foreground transition hover:border-foreground/25 hover:text-foreground cursor-pointer"
+          className="rounded-lg px-3 py-1.5 text-xs font-semibold border-2 border-border transition cursor-pointer"
+          style={{ background: "transparent", color: "#2D6A4F" }}
+          onMouseEnter={e => (e.currentTarget.style.background = "#2D6A4F22")}
+          onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
         >
           Disconnect
         </button>
@@ -38,7 +44,7 @@ export function ConnectWalletButton() {
 
   if (isConnected && status === "loading") {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-surface border border-border px-3 py-1.5 text-xs text-muted-foreground">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-surface border-2 border-border px-3 py-1.5 text-xs text-muted-foreground">
         <RiLoader4Line size={14} className="animate-spin" />
         Connecting…
       </span>
