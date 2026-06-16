@@ -2,6 +2,7 @@ import { io, type Socket } from "socket.io-client";
 import type {
   QueueJoinedPayload,
   QueueLeftPayload,
+  ReservationReadyPayload,
   MatchFoundPayload,
   GameStartedPayload,
   NewQuestionPayload,
@@ -13,6 +14,7 @@ import type {
   EscrowExpiredPayload,
   EscrowErrorPayload,
   SettlementUpdatePayload,
+  StakeAndQueuePayload,
   JoinQueuePayload,
   SubmitAnswerPayload,
   ConfirmStakePayload,
@@ -20,6 +22,7 @@ import type {
 
 // ─── Typed socket interface ───────────────────────────────────────────────────
 interface ServerToClientEvents {
+  reservation_ready: (payload: ReservationReadyPayload) => void;
   queue_joined: (payload: QueueJoinedPayload) => void;
   queue_left: (payload: QueueLeftPayload) => void;
   match_found: (payload: MatchFoundPayload) => void;
@@ -37,6 +40,7 @@ interface ServerToClientEvents {
 }
 
 interface ClientToServerEvents {
+  stake_and_queue: (payload: StakeAndQueuePayload) => void;
   join_queue: (payload: JoinQueuePayload) => void;
   leave_queue: () => void;
   confirm_stake: (payload: ConfirmStakePayload) => void;
