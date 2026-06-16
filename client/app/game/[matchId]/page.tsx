@@ -5,12 +5,25 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useGame } from "../../hooks/useGame";
 import { useAuth } from "../../hooks/useAuth";
 import { celoToBlitz } from "../../lib/currency";
+import {
+  RiTrophyFill,
+  RiSkullFill,
+  RiShakeHandsFill,
+  RiLoader4Line,
+  RiDeleteBackFill,
+  RiCheckFill,
+  RiCheckboxCircleFill,
+  RiAlertFill,
+  RiExternalLinkLine,
+  RiSkipForwardFill,
+  RiTimerFlashLine,
+  RiFlashlightFill,
+} from "react-icons/ri";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function truncateAddr(addr: string) {
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
 }
-
 function pad(n: number) {
   return String(n).padStart(2, "0");
 }
@@ -26,27 +39,21 @@ function TimerRing({ timeLeft, total = 60 }: { timeLeft: number; total?: number 
   return (
     <div className="relative flex items-center justify-center">
       <svg width="112" height="112" viewBox="0 0 112 112" className="-rotate-90">
-        {/* Track */}
-        <circle
-          cx="56" cy="56" r={radius}
-          fill="none"
-          stroke="oklch(0.88 0.014 92)"
-          strokeWidth="8"
-        />
-        {/* Progress */}
-        <circle
-          cx="56" cy="56" r={radius}
-          fill="none"
-          stroke={isUrgent ? "oklch(0.58 0.22 28)" : "oklch(0.58 0.075 152)"}
-          strokeWidth="8"
-          strokeLinecap="round"
-          strokeDasharray={circ}
-          strokeDashoffset={offset}
+        <circle cx="56" cy="56" r={radius} fill="none"
+          stroke="oklch(0.22 0.025 258)" strokeWidth="7" />
+        <circle cx="56" cy="56" r={radius} fill="none"
+          stroke={isUrgent ? "oklch(0.62 0.24 27)" : "oklch(0.82 0.185 72)"}
+          strokeWidth="7" strokeLinecap="round"
+          strokeDasharray={circ} strokeDashoffset={offset}
           className="transition-all duration-1000"
+          style={{ filter: isUrgent
+            ? "drop-shadow(0 0 6px oklch(0.62 0.24 27 / 0.7))"
+            : "drop-shadow(0 0 6px oklch(0.82 0.185 72 / 0.6))" }}
         />
       </svg>
-      <div className="absolute flex flex-col items-center">
-        <span className={`text-2xl tabular-nums ${isUrgent ? "text-destructive" : "text-foreground"}`}>
+      <div className="absolute flex flex-col items-center gap-0.5">
+        <RiTimerFlashLine size={13} className={isUrgent ? "text-destructive" : "text-primary"} />
+        <span className={`font-mono-game text-xl tabular-nums font-bold leading-none ${isUrgent ? "text-destructive" : "text-foreground"}`}>
           {pad(Math.floor(timeLeft / 60))}:{pad(timeLeft % 60)}
         </span>
       </div>
@@ -57,11 +64,20 @@ function TimerRing({ timeLeft, total = 60 }: { timeLeft: number; total?: number 
 // ─── Score Card ───────────────────────────────────────────────────────────────
 function ScoreCard({ label, score, isWinner }: { label: string; score: number; isWinner?: boolean }) {
   return (
-    <div className={`flex flex-col items-center rounded-2xl border px-6 py-4 min-w-[90px] transition
-      ${isWinner ? "border-accent/40 bg-sage-soft" : "border-border bg-card"}`}>
-      <span className="text-4xl tabular-nums text-foreground">{score}</span>
-      <span className="mt-1 text-[11px] text-muted-foreground uppercase tracking-wide">{label}</span>
-      {isWinner && <span className="mt-1 text-[10px] text-accent font-medium">WINNER</span>}
+    <div className={`flex flex-col items-center rounded-2xl border px-6 py-4 min-w-20 transition
+      ${isWinner
+        ? "border-accent/40 bg-accent/10 shadow-[0_0_16px_oklch(0.68_0.19_148/0.15)]"
+        : "border-border bg-card"}`}
+    >
+      <span className={`font-display text-4xl font-extrabold tabular-nums ${isWinner ? "text-accent" : "text-foreground"}`}>
+        {score}
+      </span>
+      <span className="mt-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{label}</span>
+      {isWinner && (
+        <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-accent">
+          <RiTrophyFill size={10} /> WIN
+        </span>
+      )}
     </div>
   );
 }
@@ -73,48 +89,53 @@ function NumberPad({ value, onChange, onSubmit, onSkip }: {
   onSubmit: () => void;
   onSkip: () => void;
 }) {
-  const keys = ["7","8","9","4","5","6","1","2","3","-","0","⌫"];
+  const keys = ["7", "8", "9", "4", "5", "6", "1", "2", "3", "-", "0", "⌫"];
 
   const handleKey = (k: string) => {
     if (k === "⌫") { onChange(value.slice(0, -1)); return; }
     if (k === "-") {
-      if (value.startsWith("-")) onChange(value.slice(1));
-      else onChange("-" + value);
+      onChange(value.startsWith("-") ? value.slice(1) : "-" + value);
       return;
     }
     if (value.length >= 6) return;
     onChange(value + k);
   };
 
+  const canSubmit = !!value && value !== "-";
+
   return (
     <div className="flex flex-col gap-3 w-full max-w-xs">
-      {/* Display */}
-      <div className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3">
-        <span className="text-2xl tabular-nums text-foreground min-w-[60px]">
+      {/* Answer display + submit */}
+      <div className="flex items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3">
+        <span className="font-mono-game text-2xl tabular-nums text-foreground min-w-15 flex-1">
           {value || <span className="text-muted-foreground">—</span>}
         </span>
         <button
           id="submit-answer-btn"
           onClick={onSubmit}
-          disabled={!value || value === "-"}
-          className="rounded-lg bg-primary px-5 py-2 text-sm text-primary-foreground shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition hover:opacity-90 active:scale-95 cursor-pointer"
+          disabled={!canSubmit}
+          className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/20 disabled:opacity-40 disabled:cursor-not-allowed transition hover:opacity-90 active:scale-95 cursor-pointer"
         >
+          <RiCheckFill size={14} />
           Submit
         </button>
       </div>
 
-      {/* Pad */}
+      {/* Number grid */}
       <div className="grid grid-cols-3 gap-2">
         {keys.map((k) => (
           <button
             key={k}
             onClick={() => handleKey(k)}
-            className={`rounded-xl py-4 text-xl transition active:scale-95 cursor-pointer
-              ${k === "⌫" ? "text-muted-foreground bg-surface hover:bg-muted"
-              : k === "-" ? "text-accent bg-surface hover:bg-muted"
-              : "text-foreground bg-surface hover:bg-muted"}`}
+            className={`rounded-2xl py-4 font-mono-game text-xl font-bold transition active:scale-95 cursor-pointer
+              ${k === "⌫"
+                ? "bg-surface border border-border text-muted-foreground hover:text-foreground hover:border-foreground/20"
+                : k === "-"
+                ? "bg-surface border border-border text-primary hover:bg-primary/10"
+                : "bg-surface border border-border text-foreground hover:bg-muted hover:border-foreground/15"
+              }`}
           >
-            {k}
+            {k === "⌫" ? <RiDeleteBackFill className="mx-auto" size={20} /> : k}
           </button>
         ))}
       </div>
@@ -122,8 +143,9 @@ function NumberPad({ value, onChange, onSubmit, onSkip }: {
       {/* Skip */}
       <button
         onClick={onSkip}
-        className="w-full rounded-xl border border-border bg-surface py-3 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition active:scale-95 cursor-pointer"
+        className="inline-flex items-center justify-center gap-2 w-full rounded-2xl border border-border bg-surface py-3 text-sm text-muted-foreground hover:text-foreground hover:border-foreground/20 transition active:scale-95 cursor-pointer"
       >
+        <RiSkipForwardFill size={15} />
         Skip question
       </button>
     </div>
@@ -139,7 +161,7 @@ function SettlementBadge({ settlement, iWon, isDraw }: {
   if (!settlement) {
     return (
       <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
-        <span className="size-2 rounded-full bg-yellow-400 animate-pulse" />
+        <span className="size-2 rounded-full bg-sand animate-pulse" />
         Settling on-chain…
       </div>
     );
@@ -149,16 +171,25 @@ function SettlementBadge({ settlement, iWon, isDraw }: {
   const explorerBase = "https://celo-sepolia.blockscout.com/tx/";
 
   if (status === "confirmed") {
-    const label = isDraw ? "Refund sent to your wallet" : iWon ? "Prize sent to your wallet" : "Result confirmed on-chain";
+    const label = isDraw
+      ? "Refund sent to your wallet"
+      : iWon
+      ? "Prize sent to your wallet"
+      : "Result confirmed on-chain";
     return (
       <div className="flex flex-col items-center gap-1">
-        <div className="flex items-center gap-2 rounded-xl border border-accent/30 bg-sage-soft px-4 py-3 text-sm text-accent">
-          <span>✓</span> {label}
+        <div className="flex items-center gap-2 rounded-xl border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-accent">
+          <RiCheckboxCircleFill size={15} />
+          {label}
         </div>
         {txHash && (
-          <a href={`${explorerBase}${txHash}`} target="_blank" rel="noopener noreferrer"
-            className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2">
-            View transaction ↗
+          <a
+            href={`${explorerBase}${txHash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition"
+          >
+            View transaction <RiExternalLinkLine size={11} />
           </a>
         )}
       </div>
@@ -167,7 +198,8 @@ function SettlementBadge({ settlement, iWon, isDraw }: {
 
   if (status === "failed") {
     return (
-      <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+      <div className="flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <RiAlertFill size={15} />
         Settlement failed — contact support with Match ID
       </div>
     );
@@ -175,7 +207,7 @@ function SettlementBadge({ settlement, iWon, isDraw }: {
 
   return (
     <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
-      <span className="size-2 rounded-full bg-yellow-400 animate-pulse" />
+      <span className="size-2 rounded-full bg-sand animate-pulse" />
       {status === "submitted" ? "Transaction submitted…" : "Settling on-chain…"}
     </div>
   );
@@ -195,20 +227,26 @@ function EndScreen({ winner, myUserId, myScore, opponentScore, wager, matchId, s
   const iWon = winner === myUserId;
   const isDraw = !winner;
 
+  const resultConfig = iWon
+    ? { icon: RiTrophyFill,   bg: "bg-primary/10",     iconColor: "text-primary",     label: "You Won!",       labelColor: "text-primary" }
+    : isDraw
+    ? { icon: RiShakeHandsFill, bg: "bg-sand/15", iconColor: "text-sand", label: "It's a Draw!", labelColor: "text-sand" }
+    : { icon: RiSkullFill,    bg: "bg-destructive/10", iconColor: "text-destructive", label: "You Lost",       labelColor: "text-destructive" };
+
+  const ResultIcon = resultConfig.icon;
+
   return (
-    <div className="flex flex-col items-center gap-6 py-10 px-4 text-center">
-      <div className={`flex size-24 items-center justify-center rounded-full text-5xl
-        ${iWon ? "bg-sage-soft" : isDraw ? "bg-sand/30" : "bg-destructive/10"}`}>
-        {iWon ? "🏆" : isDraw ? "🤝" : "💀"}
+    <div className="flex flex-col items-center gap-6 py-12 px-4 text-center min-h-screen justify-center">
+      <div className={`flex size-24 items-center justify-center rounded-3xl ${resultConfig.bg} ${resultConfig.iconColor}`}>
+        <ResultIcon size={44} />
       </div>
 
       <div className="flex flex-col gap-1">
-        <h2 className={`text-3xl
-          ${iWon ? "text-accent" : isDraw ? "text-[var(--sand)]" : "text-destructive"}`}>
-          {iWon ? "You Won!" : isDraw ? "It's a Draw!" : "You Lost"}
+        <h2 className={`font-display text-4xl font-extrabold ${resultConfig.labelColor}`}>
+          {resultConfig.label}
         </h2>
-        <p className="text-sm text-muted-foreground">
-          Match ID: {matchId.slice(-8).toUpperCase()}
+        <p className="font-mono-game text-xs text-muted-foreground">
+          #{matchId.slice(-8).toUpperCase()}
         </p>
       </div>
 
@@ -218,7 +256,10 @@ function EndScreen({ winner, myUserId, myScore, opponentScore, wager, matchId, s
       </div>
 
       <div className="rounded-xl border border-border bg-card px-5 py-3 text-sm text-muted-foreground">
-        Wager: <span className="text-foreground">{celoToBlitz(wager).toLocaleString("en-US")} Blitz</span>
+        Wager:{" "}
+        <span className="font-semibold text-primary">
+          {celoToBlitz(wager).toLocaleString("en-US")} Blitz
+        </span>
       </div>
 
       <SettlementBadge settlement={settlement} iWon={iWon} isDraw={isDraw} />
@@ -226,8 +267,9 @@ function EndScreen({ winner, myUserId, myScore, opponentScore, wager, matchId, s
       <button
         id="play-again-btn"
         onClick={onRematch}
-        className="w-full max-w-xs rounded-xl bg-primary py-4 text-base text-primary-foreground shadow-sm hover:opacity-90 transition cursor-pointer"
+        className="inline-flex items-center gap-2 w-full max-w-xs justify-center rounded-2xl bg-primary py-4 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:opacity-95 transition active:scale-95 cursor-pointer"
       >
+        <RiFlashlightFill size={18} />
         Play Again
       </button>
     </div>
@@ -281,36 +323,39 @@ export default function GamePage({ params }: { params: Promise<{ matchId: string
     setInputValue("");
   };
 
-  // Keyboard support
   useEffect(() => {
     if (phase !== "playing") return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key >= "0" && e.key <= "9") {
-        setInputValue((v) => v.length >= 6 ? v : v + e.key);
+        setInputValue((v) => (v.length >= 6 ? v : v + e.key));
       } else if (e.key === "-") {
-        setInputValue((v) => v.startsWith("-") ? v.slice(1) : "-" + v);
+        setInputValue((v) => (v.startsWith("-") ? v.slice(1) : "-" + v));
       } else if (e.key === "Backspace") {
         setInputValue((v) => v.slice(0, -1));
       } else if (e.key === "Enter") {
         const num = parseInt(inputValue, 10);
-        if (!isNaN(num)) {
-          submitAnswer(num);
-          setInputValue("");
-        }
+        if (!isNaN(num)) { submitAnswer(num); setInputValue(""); }
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [phase, inputValue, submitAnswer]);
 
-  // ── Waiting for game_started ──────────────────────────────────────────────
+  // ── Waiting ───────────────────────────────────────────────────────────────
   if (phase === "waiting") {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background">
-        <div className="size-10 rounded-full border-2 border-border border-t-accent animate-spin" />
-        <p className="text-sm text-muted-foreground">Waiting for game to start…</p>
+      <div className="flex min-h-screen flex-col items-center justify-center gap-5 bg-background">
+        <div className="flex size-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+          <RiLoader4Line size={30} className="animate-spin" />
+        </div>
+        <div className="flex flex-col items-center gap-1.5 text-center">
+          <p className="font-display text-lg font-bold text-foreground">Starting match…</p>
+          <p className="text-sm text-muted-foreground">Waiting for game to start</p>
+        </div>
         {opponentDisconnected && (
-          <p className="text-sm text-[var(--sand)]">Opponent disconnected</p>
+          <div className="rounded-xl border border-sand/30 bg-sand/10 px-4 py-2 text-sm text-sand">
+            Opponent disconnected
+          </div>
         )}
       </div>
     );
@@ -335,19 +380,33 @@ export default function GamePage({ params }: { params: Promise<{ matchId: string
   }
 
   // ── Active game ───────────────────────────────────────────────────────────
+  const difficultyConfig = {
+    1: { label: "Easy",   color: "text-accent",      dotColor: "bg-accent" },
+    2: { label: "Medium", color: "text-primary",     dotColor: "bg-primary" },
+    3: { label: "Hard",   color: "text-destructive", dotColor: "bg-destructive" },
+  } as const;
+
+  const diff = (currentQuestion?.difficulty ?? 1) as 1 | 2 | 3;
+  const dc = difficultyConfig[diff];
+
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
+
       {/* Top bar */}
-      <div className="flex items-center justify-between border-b border-border px-4 py-2">
+      <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
         <div className="flex flex-col">
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wider">You</span>
-          <span className="text-xs text-foreground font-mono">
+          <span className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">You</span>
+          <span className="font-mono-game text-xs text-foreground">
             {user ? truncateAddr(user.walletAddress) : "—"}
           </span>
         </div>
+        <div className="flex items-center gap-1.5">
+          <div className="size-1.5 rounded-full bg-primary shadow-[0_0_4px_var(--color-primary)]" />
+          <span className="font-display text-xs font-bold text-foreground">LIVE</span>
+        </div>
         <div className="flex flex-col items-end">
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Opponent</span>
-          <span className="text-xs text-foreground font-mono">
+          <span className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">Opponent</span>
+          <span className="font-mono-game text-xs text-foreground">
             {opponentAddress ? truncateAddr(opponentAddress) : "—"}
           </span>
         </div>
@@ -355,13 +414,14 @@ export default function GamePage({ params }: { params: Promise<{ matchId: string
 
       {/* Disconnect banner */}
       {opponentDisconnected && (
-        <div className="bg-sand/20 border-b border-sand/30 px-4 py-2 text-center text-xs text-[var(--sand)]">
+        <div className="border-b border-sand/20 bg-sand/10 px-4 py-2 text-center text-xs text-sand">
           Opponent disconnected — waiting for result…
         </div>
       )}
 
-      {/* Main gameplay area */}
-      <div className="flex flex-1 flex-col items-center gap-6 px-4 py-6">
+      {/* Main gameplay */}
+      <div className="flex flex-1 flex-col items-center gap-5 px-4 py-6">
+
         {/* Timer + Scores */}
         <div className="flex items-center justify-between w-full max-w-sm">
           <ScoreCard label="You" score={myScore} />
@@ -369,25 +429,23 @@ export default function GamePage({ params }: { params: Promise<{ matchId: string
           <ScoreCard label="Them" score={opponentScore} />
         </div>
 
-        {/* Question */}
-        <div className="flex flex-col items-center gap-3 w-full max-w-sm">
-          <div className="w-full rounded-2xl border border-border bg-card px-6 py-8 text-center">
-            {currentQuestion ? (
-              <>
-                <span className={`text-[10px] uppercase tracking-widest mb-3 block
-                  ${currentQuestion.difficulty === 1 ? "text-accent"
-                  : currentQuestion.difficulty === 2 ? "text-[var(--sand)]"
-                  : "text-destructive"}`}>
-                  {currentQuestion.difficulty === 1 ? "Easy" : currentQuestion.difficulty === 2 ? "Medium" : "Hard"}
+        {/* Question card */}
+        <div className="w-full max-w-sm rounded-2xl border border-border bg-card px-6 py-8 text-center">
+          {currentQuestion ? (
+            <>
+              <div className="mb-3 flex items-center justify-center gap-1.5">
+                <span className={`size-1.5 rounded-full ${dc.dotColor}`} />
+                <span className={`text-[10px] font-bold uppercase tracking-widest ${dc.color}`}>
+                  {dc.label}
                 </span>
-                <p className="text-4xl text-foreground">
-                  {currentQuestion.question} = ?
-                </p>
-              </>
-            ) : (
-              <p className="text-muted-foreground text-sm">Waiting for question…</p>
-            )}
-          </div>
+              </div>
+              <p className="font-display text-4xl font-extrabold text-foreground tracking-tight">
+                {currentQuestion.question} <span className="text-primary">=</span> ?
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">Waiting for question…</p>
+          )}
         </div>
 
         {/* Answer input */}
