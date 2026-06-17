@@ -15,10 +15,10 @@ forge test
 forge test --match-path test/MathsBlitzEscrow.t.sol
 forge test --match-test testSettleMatch
 
-# Deploy to Alfajores
+# Deploy to Celo mainnet
 PRIVATE_KEY=0x... TREASURY_ADDRESS=0x... AUTHORIZED_SIGNER=0x... \
   forge script script/DeployEscrow.s.sol:DeployEscrow \
-  --rpc-url https://alfajores-forno.celo-testnet.org --broadcast
+  --rpc-url https://forno.celo.org --broadcast
 ```
 
 ## Contract: `MathsBlitzEscrow`

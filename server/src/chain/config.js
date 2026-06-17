@@ -7,7 +7,7 @@ const {
   getAddress,
 } = require("viem");
 const { privateKeyToAccount } = require("viem/accounts");
-const { celo, celoSepolia } = require("viem/chains");
+const { celo } = require("viem/chains");
 
 /**
  * On-chain configuration for the MathsBlitz escrow.
@@ -21,18 +21,12 @@ const { celo, celoSepolia } = require("viem/chains");
  *   ESCROW_CONTRACT_ADDRESS  - deployed MathsBlitzEscrow address
  *   SETTLEMENT_PRIVATE_KEY   - private key of the authorised signer (0x-prefixed)
  *   CELO_RPC_URL             - RPC endpoint (defaults to Celo mainnet forno)
- *   CELO_NETWORK             - "mainnet" | "sepolia" (default "mainnet")
  */
 
-// Running on Celo mainnet (chain 42220).
-const NETWORK = (process.env.CELO_NETWORK || "mainnet").toLowerCase();
-const CHAIN = NETWORK === "mainnet" ? celo : celoSepolia;
+// Celo mainnet only (chain 42220).
+const CHAIN = celo;
 
-const RPC_URL =
-  process.env.CELO_RPC_URL ||
-  (NETWORK === "mainnet"
-    ? "https://forno.celo.org"
-    : "https://forno.celo-sepolia.celo-testnet.org");
+const RPC_URL = process.env.CELO_RPC_URL || "https://forno.celo.org";
 
 const CONTRACT_ADDRESS =
   process.env.ESCROW_CONTRACT_ADDRESS ||

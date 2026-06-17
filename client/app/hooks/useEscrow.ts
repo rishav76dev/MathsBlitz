@@ -154,7 +154,7 @@ export function useEscrow(wager: WagerAmount | null): UseEscrowReturn {
       setTxHash(hash);
       setTrackedPhase("confirming");
 
-      await getPublicClient(reservation.chainId).waitForTransactionReceipt({ hash });
+      await getPublicClient().waitForTransactionReceipt({ hash });
 
       // Tell the server the stake is mined — server verifies on-chain then enqueues.
       socket?.emit("confirm_stake", { reservationId: reservation.reservationId });
