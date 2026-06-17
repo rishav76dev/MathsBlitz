@@ -159,7 +159,7 @@ function SettlementBadge({ settlement, iWon, isDraw }: {
   }
 
   const { status, txHash } = settlement;
-  const explorerBase = "https://celo-sepolia.blockscout.com/tx/";
+  const explorerBase = "https://celoscan.io/tx/";
 
   if (status === "confirmed") {
     const label = isDraw
