@@ -12,7 +12,7 @@ async function connectDB() {
   });
 
   isConnected = true;
-  console.log(`[DB] Connected to MongoDB at ${MONGODB_URI}`);
+  // console.log(`[DB] Connected to MongoDB at ${MONGODB_URI}`);
 }
 
 async function disconnectDB() {
