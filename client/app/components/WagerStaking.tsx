@@ -19,8 +19,8 @@ function Spinner() {
   return <RiLoader4Line size={28} className="animate-spin text-primary" />;
 }
 
-function ExplorerLink({ chainId, txHash }: { chainId: number | null | undefined; txHash: string }) {
-  const base = chainId === 42220 ? "https://celoscan.io/tx/" : "https://celo-sepolia.blockscout.com/tx/";
+function ExplorerLink({ txHash }: { txHash: string }) {
+  const base = "https://celoscan.io/tx/";
   return (
     <a
       href={`${base}${txHash}`}
@@ -109,7 +109,7 @@ export function WagerStaking({ wager, onExit }: { wager: WagerAmount; onExit: ()
           <>
             <Spinner />
             <p className="text-sm text-muted-foreground text-center">Confirming your stake on-chain…</p>
-            {txHash && <ExplorerLink chainId={null} txHash={txHash} />}
+            {txHash && <ExplorerLink txHash={txHash} />}
           </>
         )}
 
@@ -128,7 +128,7 @@ export function WagerStaking({ wager, onExit }: { wager: WagerAmount; onExit: ()
             <p className="text-sm font-semibold text-foreground text-center">
               Stake locked — finding opponent…
             </p>
-            {txHash && <ExplorerLink chainId={null} txHash={txHash} />}
+            {txHash && <ExplorerLink txHash={txHash} />}
             <button
               onClick={withdraw}
               className="neo-btn-ghost w-full py-3 text-sm"
