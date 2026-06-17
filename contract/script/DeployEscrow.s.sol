@@ -12,9 +12,9 @@ import "../src/MathsBlitzEscrow.sol";
  *   TREASURY_ADDRESS   - receives the 5 % cut
  *   AUTHORIZED_SIGNER  - backend signer allowed to settle matches
  *
- * Example (Alfajores):
+ * Example (Celo mainnet):
  *   forge script script/DeployEscrow.s.sol:DeployEscrow \
- *     --rpc-url https://alfajores-forno.celo-testnet.org \
+ *     --rpc-url https://forno.celo.org \
  *     --broadcast
  */
 contract DeployEscrow is Script {
