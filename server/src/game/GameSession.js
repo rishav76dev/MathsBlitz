@@ -47,6 +47,8 @@ class GameSession {
     this._matchTimer = null;
     this._started = false;
     this._ended = false;
+    this._readyPlayers = new Set();
+    this._readyFallback = null;
 
     // Set by GameSessionManager when escrow is in play.
     this.onchainMatchId = null;
@@ -58,6 +60,20 @@ class GameSession {
   /** @returns {boolean} whether the game has begun (or finished). */
   isStarted() {
     return this._started;
+  }
+
+  /**
+   * Called when a player's game page emits game_ready.
+   * Starts the session immediately once both players are ready.
+   * @param {string} userId
+   */
+  playerReady(userId) {
+    if (this._started || this._ended) return;
+    this._readyPlayers.add(userId);
+    if (this._readyPlayers.has(this.player1.userId) && this._readyPlayers.has(this.player2.userId)) {
+      clearTimeout(this._readyFallback);
+      this.start();
+    }
   }
 
   start() {

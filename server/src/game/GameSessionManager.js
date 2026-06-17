@@ -10,7 +10,7 @@ const {
 } = require("../chain/config");
 // QueueManager is required lazily inside methods to break the circular dependency
 // (QueueManager → GameSessionManager → QueueManager).
-const START_DELAY_MS = 2_000; // grace period for clients to navigate before play starts
+const START_DELAY_MS = 10_000; // fallback: start after this even if game_ready not received from both
 
 /**
  * Manages all active GameSession instances and the pre-queue staking flow.
@@ -216,7 +216,9 @@ class GameSessionManager {
       opponentAddress: player1.walletAddress,
     });
 
-    setTimeout(() => session.start(), START_DELAY_MS);
+    // Start immediately when both players emit game_ready, or after fallback delay.
+    const fallback = setTimeout(() => session.start(), START_DELAY_MS);
+    session._readyFallback = fallback;
     this._scheduleCleanup(matchId, player1.userId, player2.userId);
 
     return session;
