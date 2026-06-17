@@ -82,8 +82,8 @@ class GameSession {
     });
 
     // Send each player their own first question
-    this._sendNewQuestionToPlayer(player1.userId);
-    this._sendNewQuestionToPlayer(player2.userId);
+    this._sendNewQuestionToPlayer(this.player1.userId);
+    this._sendNewQuestionToPlayer(this.player2.userId);
 
     // Tick every second for elapsed time tracking
     this._matchTimer = setInterval(() => this._tick(), 1000);
