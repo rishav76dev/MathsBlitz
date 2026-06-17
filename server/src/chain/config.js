@@ -103,7 +103,6 @@ function wagerToWei(celoAmount) {
 module.exports = {
   CHAIN,
   RPC_URL,
-  NETWORK,
   CONTRACT_ADDRESS: CONTRACT_ADDRESS ? getAddress(CONTRACT_ADDRESS) : null,
   ESCROW_ENABLED,
   getPublicClient,
