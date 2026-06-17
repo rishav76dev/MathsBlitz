@@ -1,8 +1,6 @@
 /**
  * Minimal ABI for MathsBlitzEscrow — only the entries the backend needs.
  * Mirrors contract/src/MathsBlitzEscrow.sol (symmetric native-CELO escrow).
- *
- * TODO: migrate to Celo mainnet before production.
  */
 const ESCROW_ABI = [
   // ── Views ──────────────────────────────────────────────────────────────────

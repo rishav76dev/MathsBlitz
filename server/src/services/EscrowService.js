@@ -9,8 +9,6 @@ const { ESCROW_ABI, OnchainMatchStatus } = require("../chain/escrowAbi");
 
 /**
  * On-chain helpers for the symmetric MathsBlitzEscrow contract.
- *
- * TODO: migrate to Celo mainnet before production.
  */
 const EscrowService = {
   enabled: ESCROW_ENABLED,
