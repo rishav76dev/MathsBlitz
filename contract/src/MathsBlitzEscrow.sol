@@ -14,8 +14,6 @@ import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
  *         backend signer links two deposits into a match once an opponent is
  *         found, then settles after the game.
  *
- * TODO: migrate to Celo mainnet before production.
- *
  * Flow
  * ----
  * 1. player calls  depositStake(reservationId){value: wager}   → reservation created
@@ -63,6 +61,10 @@ contract MathsBlitzEscrow is Ownable, Pausable, ReentrancyGuard {
     address public treasury;
     address public authorizedSigner;
 
+    // Treasury fees accumulate here instead of being pushed out on every settle.
+    // They stay locked in the contract (counts as TVL) until the owner withdraws.
+    uint256 public accumulatedFees;
+
     mapping(bytes32 => Reservation) private _reservations;
     mapping(bytes32 => Match) private _matches;
     mapping(bytes32 => bool) private _usedSettlements;
@@ -74,6 +76,7 @@ contract MathsBlitzEscrow is Ownable, Pausable, ReentrancyGuard {
     event MatchLinked(bytes32 indexed matchId, bytes32 indexed reservationA, bytes32 indexed reservationB, uint256 wager);
     event MatchSettled(bytes32 indexed matchId, address indexed winner, uint256 winnerAmount, uint256 treasuryAmount);
     event MatchCancelled(bytes32 indexed matchId);
+    event FeesWithdrawn(address indexed treasury, uint256 amount);
     event TreasuryUpdated(address indexed oldTreasury, address indexed newTreasury);
     event AuthorizedSignerUpdated(address indexed oldSigner, address indexed newSigner);
 
@@ -235,8 +238,10 @@ contract MathsBlitzEscrow is Ownable, Pausable, ReentrancyGuard {
         uint256 winnerAmount = (pot * WINNER_BPS) / BPS_DENOM;
         uint256 treasuryAmount = pot - winnerAmount;
 
+        // Winner is paid out immediately; the treasury cut stays locked in the
+        // contract (accumulatedFees) and is withdrawn later via withdrawFees().
+        accumulatedFees += treasuryAmount;
         _sendValue(winner, winnerAmount);
-        _sendValue(treasury, treasuryAmount);
 
         emit MatchSettled(matchId, winner, winnerAmount, treasuryAmount);
     }
@@ -297,6 +302,17 @@ contract MathsBlitzEscrow is Ownable, Pausable, ReentrancyGuard {
     }
 
     // ─── Admin ────────────────────────────────────────────────────────────────
+
+    /**
+     * @notice Withdraw all accumulated treasury fees to the treasury address.
+     *         Fees sit locked in the contract until this is called.
+     */
+    function withdrawFees() external nonReentrant onlyOwner {
+        uint256 amount = accumulatedFees;
+        accumulatedFees = 0;
+        _sendValue(treasury, amount);
+        emit FeesWithdrawn(treasury, amount);
+    }
 
     function setTreasury(address _treasury) external onlyOwner {
         if (_treasury == address(0)) revert ZeroAddress();
