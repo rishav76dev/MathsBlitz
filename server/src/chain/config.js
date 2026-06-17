@@ -20,16 +20,12 @@ const { celo, celoSepolia } = require("viem/chains");
  * Required env vars to enable escrow:
  *   ESCROW_CONTRACT_ADDRESS  - deployed MathsBlitzEscrow address
  *   SETTLEMENT_PRIVATE_KEY   - private key of the authorised signer (0x-prefixed)
- *   CELO_RPC_URL             - RPC endpoint (defaults to Celo Sepolia forno)
- *   CELO_NETWORK             - "mainnet" | "sepolia" (default "sepolia")
- *
- * TODO: migrate to Celo mainnet before production.
- * To switch: set CELO_NETWORK=mainnet, update ESCROW_CONTRACT_ADDRESS to the
- * mainnet deployment, and fund the settlement signer with real CELO.
+ *   CELO_RPC_URL             - RPC endpoint (defaults to Celo mainnet forno)
+ *   CELO_NETWORK             - "mainnet" | "sepolia" (default "mainnet")
  */
 
-// Currently on Celo Sepolia testnet (chain 11142220).
-const NETWORK = (process.env.CELO_NETWORK || "sepolia").toLowerCase();
+// Running on Celo mainnet (chain 42220).
+const NETWORK = (process.env.CELO_NETWORK || "mainnet").toLowerCase();
 const CHAIN = NETWORK === "mainnet" ? celo : celoSepolia;
 
 const RPC_URL =
@@ -38,7 +34,9 @@ const RPC_URL =
     ? "https://forno.celo.org"
     : "https://forno.celo-sepolia.celo-testnet.org");
 
-const CONTRACT_ADDRESS = process.env.ESCROW_CONTRACT_ADDRESS || null;
+const CONTRACT_ADDRESS =
+  process.env.ESCROW_CONTRACT_ADDRESS ||
+  "0x7fe6844ed774d12ef6a4481f8df17cb698d07397";
 const SETTLEMENT_PRIVATE_KEY = process.env.SETTLEMENT_PRIVATE_KEY || null;
 
 const ESCROW_ENABLED = Boolean(CONTRACT_ADDRESS && SETTLEMENT_PRIVATE_KEY);
