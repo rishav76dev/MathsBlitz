@@ -90,6 +90,15 @@ function registerGameHandlers(socket, io) {
     _serverWithdrawIfNeeded(entry);
   });
 
+  // ── game_ready ────────────────────────────────────────────────────────────
+  // Client emits this once the game page has mounted and is listening for
+  // game_started. The session starts as soon as both players are ready.
+  socket.on("game_ready", ({ matchId } = {}) => {
+    if (!matchId) return;
+    const session = gameSessionManager.getSession(matchId);
+    if (session) session.playerReady(userId);
+  });
+
   // ── confirm_stake ─────────────────────────────────────────────────────────
   // Client reports its depositStake tx has confirmed. Server verifies on-chain,
   // then adds the player to the matchmaking queue.
