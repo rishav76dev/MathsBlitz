@@ -7,4 +7,10 @@ remappings = [
     "forge-std/=lib/forge-std/src/",
 ]
 
+[rpc_endpoints]
+celo = "https://forno.celo.org"
+
+[etherscan]
+celo = { key = "${CELOSCAN_API_KEY}", chain = 42220, url = "https://api.celoscan.io/api" }
+
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
