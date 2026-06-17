@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, use } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useGame } from "../../hooks/useGame";
 import { useAuth } from "../../hooks/useAuth";
+import { useSocket } from "../../hooks/useSocket";
 import { celoToBlitz } from "../../lib/currency";
 import {
   RiTrophyFill,
@@ -274,6 +275,13 @@ export default function GamePage({ params }: { params: Promise<{ matchId: string
   const { user } = useAuth();
 
   const wager = parseFloat(searchParams.get("wager") ?? "1");
+  const { socket } = useSocket();
+
+  // Tell the server this client is on the game page and ready to receive game_started.
+  useEffect(() => {
+    if (!socket || !matchId) return;
+    socket.emit("game_ready", { matchId });
+  }, [socket, matchId]);
 
   const {
     phase,
