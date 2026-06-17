@@ -44,6 +44,7 @@ interface ClientToServerEvents {
   join_queue: (payload: JoinQueuePayload) => void;
   leave_queue: () => void;
   confirm_stake: (payload: ConfirmStakePayload) => void;
+  game_ready: (payload: { matchId: string }) => void;
   submit_answer: (payload: SubmitAnswerPayload) => void;
   skip_question: (payload: { matchId: string; questionId: string }) => void;
 }
