@@ -292,9 +292,40 @@ contract MathsBlitzEscrowTest is Test {
         escrow.settleMatch(MATCH_ID, player1, sig);
 
         assertEq(player1.balance,   p1Before + expectedWinnerAmt);
-        assertEq(treasury.balance,  treBefore + expectedTreasuryAmt);
-        assertEq(address(escrow).balance, 0);
+        // Treasury cut is now retained in-contract (TVL), not pushed to treasury wallet.
+        assertEq(treasury.balance,  treBefore);
+        assertEq(escrow.accumulatedFees(), expectedTreasuryAmt);
+        assertEq(address(escrow).balance, expectedTreasuryAmt);
         assertEq(uint8(escrow.getMatch(MATCH_ID).status), uint8(MathsBlitzEscrow.MatchStatus.Settled));
+    }
+
+    function test_withdrawFees_byOwner() public {
+        _depositAndLink(MATCH_ID, RESERV_A, RESERV_B);
+
+        uint256 pot = WAGER * 2;
+        uint256 expectedTreasuryAmt = pot - (pot * 9500) / 10_000;
+
+        bytes memory sig = _sign(MATCH_ID, player1);
+        vm.prank(stranger);
+        escrow.settleMatch(MATCH_ID, player1, sig);
+
+        uint256 treBefore = treasury.balance;
+
+        vm.expectEmit(true, false, false, true);
+        emit MathsBlitzEscrow.FeesWithdrawn(treasury, expectedTreasuryAmt);
+
+        vm.prank(owner);
+        escrow.withdrawFees();
+
+        assertEq(treasury.balance, treBefore + expectedTreasuryAmt);
+        assertEq(escrow.accumulatedFees(), 0);
+        assertEq(address(escrow).balance, 0);
+    }
+
+    function test_withdrawFees_revertNonOwner() public {
+        vm.prank(stranger);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, stranger));
+        escrow.withdrawFees();
     }
 
     function test_settleMatch_player2Wins() public {
