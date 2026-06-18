@@ -103,6 +103,10 @@ const QueueManager = {
       queue.unshift(player1, player2);
       playerWagerIndex.set(player1.userId, wager);
       playerWagerIndex.set(player2.userId, wager);
+
+      if (queue.length >= 2) {
+        queueMicrotask(() => this._tryMatch(wager, io));
+      }
     }
   },
 

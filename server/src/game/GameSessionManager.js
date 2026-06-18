@@ -54,7 +54,17 @@ class GameSessionManager {
   createReservation(player, wager, io) {
     if (!ESCROW_ENABLED) return;
 
-    // Overwrite any stale pending reservation for this player.
+    // Reclaim any stale pending reservation for this player before replacing it.
+    const stale = this._pendingReservations.get(player.userId);
+    if (stale) {
+      void EscrowService.withdrawReservation(stale.reservationId).catch((err) => {
+        console.error(
+          `[Escrow] Failed to reclaim stale reservation for ${player.userId}:`,
+          err.shortMessage || err.message
+        );
+      });
+    }
+
     const reservationId = deriveReservationId(player.userId, Date.now());
     this._pendingReservations.set(player.userId, {
       reservationId,
@@ -257,10 +267,24 @@ class GameSessionManager {
     return matchId ? this._sessions.get(matchId) : undefined;
   }
 
-  handleDisconnect(userId) {
+  async handleDisconnect(userId) {
     const session = this.getSessionByUserId(userId);
     if (session) session.handlePlayerDisconnect(userId);
-    // Also clean up any pending reservation.
+
+    const pending = this._pendingReservations.get(userId);
+    if (!pending) return;
+
+    try {
+      await EscrowService.withdrawReservation(pending.reservationId);
+      console.log(`[Escrow] Pending reservation reclaimed for ${userId}`);
+    } catch (err) {
+      console.error(
+        `[Escrow] Failed to reclaim pending reservation for ${userId}:`,
+        err.shortMessage || err.message
+      );
+      return;
+    }
+
     this._pendingReservations.delete(userId);
   }
 }

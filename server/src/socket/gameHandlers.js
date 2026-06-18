@@ -3,7 +3,9 @@ const { gameSessionManager } = require("../game/GameSessionManager");
 const {
   ESCROW_ENABLED,
   CONTRACT_ADDRESS,
+  getPublicClient,
   getWalletClient,
+  runWalletTransaction,
 } = require("../chain/config");
 const { ESCROW_ABI } = require("../chain/escrowAbi");
 
@@ -16,24 +18,28 @@ const { ESCROW_ABI } = require("../chain/escrowAbi");
  */
 function _serverWithdrawIfNeeded(entry) {
   if (!ESCROW_ENABLED || !entry?.reservationId) return;
-  getWalletClient()
-    .writeContract({
+  const walletClient = getWalletClient();
+  runWalletTransaction(async () => {
+    const txHash = await walletClient.writeContract({
       address: CONTRACT_ADDRESS,
       abi: ESCROW_ABI,
       functionName: "serverWithdrawStake",
       args: [entry.reservationId],
-    })
-    .then((txHash) => {
-      console.log(
-        `[Escrow] serverWithdrawStake submitted for ${entry.reservationId} (tx: ${txHash})`
-      );
-    })
-    .catch((err) => {
-      console.error(
-        `[Escrow] serverWithdrawStake failed for ${entry.reservationId}:`,
-        err.shortMessage || err.message
-      );
     });
+    console.log(
+      `[Escrow] serverWithdrawStake submitted for ${entry.reservationId} (tx: ${txHash})`
+    );
+    const receipt = await getPublicClient().waitForTransactionReceipt({ hash: txHash });
+    if (receipt.status !== "success") {
+      throw new Error("serverWithdrawStake transaction reverted");
+    }
+    return txHash;
+  }).catch((err) => {
+    console.error(
+      `[Escrow] serverWithdrawStake failed for ${entry.reservationId}:`,
+      err.shortMessage || err.message
+    );
+  });
 }
 
 /**

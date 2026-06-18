@@ -39,6 +39,7 @@ const ESCROW_ENABLED = Boolean(CONTRACT_ADDRESS && SETTLEMENT_PRIVATE_KEY);
 let _publicClient = null;
 let _walletClient = null;
 let _account = null;
+let _walletTxQueue = Promise.resolve();
 
 function getPublicClient() {
   if (!_publicClient) {
@@ -68,6 +69,23 @@ function getWalletClient() {
     });
   }
   return _walletClient;
+}
+
+/**
+ * Serialize all transactions sent from the server wallet.
+ *
+ * The backend uses one signer for match linking, settlement, and queue
+ * withdrawals. Those writes must not race each other, or nonce assignment can
+ * collide when multiple matches settle at once.
+ *
+ * @template T
+ * @param {() => Promise<T>} task
+ * @returns {Promise<T>}
+ */
+function runWalletTransaction(task) {
+  const next = _walletTxQueue.then(task, task);
+  _walletTxQueue = next.catch(() => {});
+  return next;
 }
 
 /**
@@ -107,6 +125,7 @@ module.exports = {
   ESCROW_ENABLED,
   getPublicClient,
   getWalletClient,
+  runWalletTransaction,
   getSettlementAccount,
   deriveOnchainMatchId,
   deriveReservationId,

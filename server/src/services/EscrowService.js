@@ -3,6 +3,7 @@ const {
   CONTRACT_ADDRESS,
   getPublicClient,
   getWalletClient,
+  runWalletTransaction,
   wagerToWei,
 } = require("../chain/config");
 const { ESCROW_ABI, OnchainMatchStatus } = require("../chain/escrowAbi");
@@ -92,6 +93,31 @@ const EscrowService = {
   },
 
   /**
+   * Reclaim an unlinked reservation using the server wallet.
+   * Used when a player disconnects before entering the queue, or when a stale
+   * reservation must be replaced.
+   *
+   * @param {`0x${string}`} reservationId
+   * @returns {Promise<`0x${string}`>}
+   */
+  async withdrawReservation(reservationId) {
+    const walletClient = getWalletClient();
+    return runWalletTransaction(async () => {
+      const hash = await walletClient.writeContract({
+        address: CONTRACT_ADDRESS,
+        abi: ESCROW_ABI,
+        functionName: "serverWithdrawStake",
+        args: [reservationId],
+      });
+      const receipt = await getPublicClient().waitForTransactionReceipt({ hash });
+      if (receipt.status !== "success") {
+        throw new Error("serverWithdrawStake transaction reverted");
+      }
+      return hash;
+    });
+  },
+
+  /**
    * Submit linkMatch on-chain. Called by the server once two players are matched.
    * Waits for the transaction to be mined.
    *
@@ -102,14 +128,19 @@ const EscrowService = {
    */
   async linkMatch(matchId, reservationA, reservationB) {
     const walletClient = getWalletClient();
-    const hash = await walletClient.writeContract({
-      address: CONTRACT_ADDRESS,
-      abi: ESCROW_ABI,
-      functionName: "linkMatch",
-      args: [matchId, reservationA, reservationB],
+    return runWalletTransaction(async () => {
+      const hash = await walletClient.writeContract({
+        address: CONTRACT_ADDRESS,
+        abi: ESCROW_ABI,
+        functionName: "linkMatch",
+        args: [matchId, reservationA, reservationB],
+      });
+      const receipt = await getPublicClient().waitForTransactionReceipt({ hash });
+      if (receipt.status !== "success") {
+        throw new Error("linkMatch transaction reverted");
+      }
+      return hash;
     });
-    await getPublicClient().waitForTransactionReceipt({ hash });
-    return hash;
   },
 };
 

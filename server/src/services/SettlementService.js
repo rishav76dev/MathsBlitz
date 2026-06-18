@@ -4,6 +4,7 @@ const {
   CONTRACT_ADDRESS,
   CHAIN,
   getWalletClient,
+  runWalletTransaction,
   getPublicClient,
   getSettlementAccount,
 } = require("../chain/config");
@@ -91,13 +92,19 @@ const SettlementService = {
       if (!winnerAddress) {
         await MatchRepository.setSettlement(dbMatchId, { status: "pending" });
         const walletClient = getWalletClient();
-        const txHash = await walletClient.writeContract({
-          address: CONTRACT_ADDRESS,
-          abi: ESCROW_ABI,
-          functionName: "refundDraw",
-          args: [onchainMatchId],
+        const txHash = await runWalletTransaction(async () => {
+          const hash = await walletClient.writeContract({
+            address: CONTRACT_ADDRESS,
+            abi: ESCROW_ABI,
+            functionName: "refundDraw",
+            args: [onchainMatchId],
+          });
+          const receipt = await getPublicClient().waitForTransactionReceipt({ hash });
+          if (receipt.status !== "success") {
+            throw new Error("refundDraw transaction reverted");
+          }
+          return hash;
         });
-        await getPublicClient().waitForTransactionReceipt({ hash: txHash });
         await MatchRepository.setSettlement(dbMatchId, { status: "confirmed", txHash });
         console.log(`[Settlement] Draw refund confirmed for ${dbMatchId} (tx: ${txHash})`);
         return { status: "confirmed", txHash };
@@ -140,27 +147,30 @@ const SettlementService = {
       // Sign + submit
       const signature = await this.sign(onchainMatchId, winner);
       const walletClient = getWalletClient();
-      const txHash = await walletClient.writeContract({
-        address: CONTRACT_ADDRESS,
-        abi: ESCROW_ABI,
-        functionName: "settleMatch",
-        args: [onchainMatchId, winner, signature],
+      const txHash = await runWalletTransaction(async () => {
+        const hash = await walletClient.writeContract({
+          address: CONTRACT_ADDRESS,
+          abi: ESCROW_ABI,
+          functionName: "settleMatch",
+          args: [onchainMatchId, winner, signature],
+        });
+        const receipt = await getPublicClient().waitForTransactionReceipt({ hash });
+        if (receipt.status !== "success") {
+          throw new Error("settleMatch transaction reverted");
+        }
+        return hash;
       });
 
       await MatchRepository.setSettlement(dbMatchId, { status: "submitted", txHash, winnerAddress: winner });
 
-      // Wait for confirmation (best-effort; status already recorded as submitted)
-      const receipt = await getPublicClient().waitForTransactionReceipt({ hash: txHash });
-      const finalStatus = receipt.status === "success" ? "confirmed" : "failed";
       await MatchRepository.setSettlement(dbMatchId, {
-        status: finalStatus,
+        status: "confirmed",
         txHash,
         winnerAddress: winner,
-        ...(finalStatus === "failed" ? { error: "tx_reverted" } : {}),
       });
 
-      console.log(`[Settlement] Match ${dbMatchId} ${finalStatus} (tx: ${txHash})`);
-      return { status: finalStatus, txHash };
+      console.log(`[Settlement] Match ${dbMatchId} confirmed (tx: ${txHash})`);
+      return { status: "confirmed", txHash };
     } catch (err) {
       console.error(`[Settlement] Failed to settle match ${dbMatchId}:`, err);
       await MatchRepository.setSettlement(dbMatchId, {
