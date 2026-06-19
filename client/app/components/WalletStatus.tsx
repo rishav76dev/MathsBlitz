@@ -7,9 +7,10 @@ import {
   RiFileCopyLine,
   RiCheckLine,
   RiWallet3Fill,
-  RiTrophyFill,
-  RiCloseLine,
-  RiGameFill,
+  // TODO: future feature — wins/losses stats icons
+  // RiTrophyFill,
+  // RiCloseLine,
+  // RiGameFill,
 } from "react-icons/ri";
 
 function formatBalance(balance: string | null): string {
@@ -41,11 +42,12 @@ export function WalletStatus() {
       ? "bg-sand animate-pulse"
       : "bg-destructive";
 
-  const stats = [
-    { label: "Wins",    value: user?.wins ?? 0,          icon: RiTrophyFill,  colorClass: "text-primary" },
-    { label: "Losses",  value: user?.losses ?? 0,        icon: RiCloseLine,   colorClass: "text-destructive" },
-    { label: "Matches", value: user?.matchesPlayed ?? 0, icon: RiGameFill,    colorClass: "text-muted-foreground" },
-  ];
+  // TODO: future feature — wins/losses/matchesPlayed stats
+  // const stats = [
+  //   { label: "Wins",    value: user?.wins ?? 0,          icon: RiTrophyFill,  colorClass: "text-primary" },
+  //   { label: "Losses",  value: user?.losses ?? 0,        icon: RiCloseLine,   colorClass: "text-destructive" },
+  //   { label: "Matches", value: user?.matchesPlayed ?? 0, icon: RiGameFill,    colorClass: "text-muted-foreground" },
+  // ];
 
   return (
     <div
@@ -115,8 +117,8 @@ export function WalletStatus() {
         </div>
       </div>
 
-      {/* Profile stats */}
-      {isAuthenticated && user && (
+      {/* TODO: future feature — profile stats (wins/losses/matches) */}
+      {/* {isAuthenticated && user && (
         <>
           <div className="h-0.5 bg-border/20 mb-4" aria-hidden="true" />
           <div className="flex flex-col gap-2">
@@ -142,7 +144,7 @@ export function WalletStatus() {
             </div>
           </div>
         </>
-      )}
+      )} */}
     </div>
   );
 }
