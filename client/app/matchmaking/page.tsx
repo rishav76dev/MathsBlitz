@@ -16,9 +16,10 @@ import {
   RiWifiLine,
   RiWifiOffLine,
   RiLoader4Line,
-  RiTrophyFill,
-  RiCloseLine,
-  RiGameFill,
+  // TODO: future feature — wins/losses stats icons
+  // RiTrophyFill,
+  // RiCloseLine,
+  // RiGameFill,
 } from "react-icons/ri";
 
 export default function MatchmakingPage() {
@@ -140,7 +141,8 @@ export default function MatchmakingPage() {
               <p className="text-sm font-semibold text-foreground">
                 {user.username ?? `${user.walletAddress.slice(0, 6)}…${user.walletAddress.slice(-4)}`}
               </p>
-              <div className="flex items-center gap-2 mt-0.5">
+              {/* TODO: future feature — wins/losses/matchesPlayed stats */}
+              {/* <div className="flex items-center gap-2 mt-0.5">
                 <span className="inline-flex items-center gap-1 text-[11px] text-accent font-semibold">
                   <RiTrophyFill size={10} />{user.wins}W
                 </span>
@@ -150,7 +152,7 @@ export default function MatchmakingPage() {
                 <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
                   <RiGameFill size={10} />{user.matchesPlayed}
                 </span>
-              </div>
+              </div> */}
             </div>
           </div>
         )}
