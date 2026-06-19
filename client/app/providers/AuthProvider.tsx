@@ -14,9 +14,10 @@ export interface AuthUser {
   id: string;
   walletAddress: string;
   username: string | null;
-  wins: number;
-  losses: number;
-  matchesPlayed: number;
+  // TODO: future feature — wins/losses/matchesPlayed stats
+  // wins: number;
+  // losses: number;
+  // matchesPlayed: number;
 }
 
 export type AuthStatus = "idle" | "loading" | "authenticated" | "unauthenticated";
@@ -97,9 +98,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               id: wallet.address!,
               walletAddress: wallet.address!,
               username: null,
-              wins: 0,
-              losses: 0,
-              matchesPlayed: 0,
+              // wins: 0,
+              // losses: 0,
+              // matchesPlayed: 0,
             });
           }
           setStatus("authenticated");
@@ -110,9 +111,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             id: wallet.address!,
             walletAddress: wallet.address!,
             username: null,
-            wins: 0,
-            losses: 0,
-            matchesPlayed: 0,
+            // wins: 0,
+            // losses: 0,
+            // matchesPlayed: 0,
           });
           setStatus("authenticated");
         });
