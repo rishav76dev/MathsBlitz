@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ConnectWalletButton } from "./components/ConnectWalletButton";
 import { WalletStatus } from "./components/WalletStatus";
 import { useAuth } from "./hooks/useAuth";
-import { RiFlashlightFill, RiSwordFill, RiCoinsFill, RiTrophyFill } from "react-icons/ri";
+import { RiFlashlightFill, RiSwordFill, RiCoinsFill/*, RiTrophyFill*/ } from "react-icons/ri"; // TODO: restore RiTrophyFill for win streaks feature
 
 const features = [
   {
@@ -19,12 +19,13 @@ const features = [
     title: "Blitz stakes",
     body: "Put skin in the game. Wager CELO — winner takes 95% of the pot, settled on-chain instantly.",
   },
-  {
-    icon: RiTrophyFill,
-    num: "03",
-    title: "Win streaks",
-    body: "Track your wins, losses, and matches played. Climb the global leaderboard.",
-  },
+  // TODO: future feature — win streaks / leaderboard
+  // {
+  //   icon: RiTrophyFill,
+  //   num: "03",
+  //   title: "Win streaks",
+  //   body: "Track your wins, losses, and matches played. Climb the global leaderboard.",
+  // },
 ];
 
 const steps = [
