@@ -5,6 +5,19 @@ import { Providers } from "./providers";
 export const metadata: Metadata = {
   title: "MathsBlitz",
   description: "Competitive maths duels on Celo — powered by MiniPay",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
+  openGraph: {
+    title: "MathsBlitz",
+    description: "Competitive maths duels on Celo — powered by MiniPay",
+    images: [{ url: "/logo.png" }],
+  },
+  twitter: {
+    card: "summary",
+    images: ["/logo.png"],
+  },
 };
 
 export default function RootLayout({
