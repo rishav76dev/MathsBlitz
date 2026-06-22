@@ -66,7 +66,7 @@ export default function Home() {
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-6">
           <div className="flex items-center gap-3">
             <Image
-              src="/logo.jpeg"
+              src="/logo.png"
               alt="MathsBlitz logo"
               width={52}
               height={52}
