@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { ConnectWalletButton } from "./components/ConnectWalletButton";
 import { WalletStatus } from "./components/WalletStatus";
 import { useAuth } from "./hooks/useAuth";
@@ -64,12 +65,12 @@ export default function Home() {
       >
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-6">
           <div className="flex items-center gap-3">
-            <div
-              className="flex size-9 items-center justify-center rounded-xl border-2 border-border"
-              style={{ background: "#2D6A4F", boxShadow: "2px 2px 0 #1A1E1B" }}
-            >
-              <RiFlashlightFill size={18} style={{ color: "#FCFF52" }} />
-            </div>
+            <Image
+              src="/logo.jpeg"
+              alt="MathsBlitz logo"
+              width={52}
+              height={52}
+            />
             <span className="font-display text-lg font-bold tracking-tight" style={{ color: "#2D6A4F" }}>
               MathsBlitz
             </span>
