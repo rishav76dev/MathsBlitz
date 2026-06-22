@@ -3,14 +3,32 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"
+  ),
   title: "MathsBlitz",
   description: "Competitive maths duels on Celo — powered by MiniPay",
+  icons: {
+    icon: "/icon.png",
+  },
   openGraph: {
     title: "MathsBlitz",
     description: "Competitive maths duels on Celo — powered by MiniPay",
+    type: "website",
+    images: [
+      {
+        url: "/opengraph-image.png",
+        width: 870,
+        height: 771,
+        alt: "MathsBlitz — Competitive maths duels on Celo",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
+    title: "MathsBlitz",
+    description: "Competitive maths duels on Celo — powered by MiniPay",
+    images: ["/opengraph-image.png"],
   },
 };
 
