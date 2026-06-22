@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ConnectWalletButton } from "./components/ConnectWalletButton";
 import { WalletStatus } from "./components/WalletStatus";
 import { useAuth } from "./hooks/useAuth";
-import { RiFlashlightFill, RiSwordFill, RiCoinsFill/*, RiTrophyFill*/ } from "react-icons/ri"; // TODO: restore RiTrophyFill for win streaks feature
+import { RiFlashlightFill, RiSwordFill, RiCoinsFill, RiTrophyFill } from "react-icons/ri";
 
 const features = [
   {
@@ -19,13 +19,13 @@ const features = [
     title: "Blitz stakes",
     body: "Put skin in the game. Wager CELO — winner takes 95% of the pot, settled on-chain instantly.",
   },
-  // TODO: future feature — win streaks / leaderboard
-  // {
-  //   icon: RiTrophyFill,
-  //   num: "03",
-  //   title: "Win streaks",
-  //   body: "Track your wins, losses, and matches played. Climb the global leaderboard.",
-  // },
+  {
+    icon: RiTrophyFill,
+    num: "03",
+    title: "Win streaks",
+    body: "Track your wins, losses, and matches played. Climb the global leaderboard.",
+    comingSoon: true,
+  },
 ];
 
 const steps = [
@@ -139,7 +139,12 @@ export default function Home() {
           {features.map((f) => {
             const Icon = f.icon;
             return (
-              <div key={f.title} className="neo-card p-6">
+              <div key={f.title} className={`neo-card p-6 relative${f.comingSoon ? " opacity-70" : ""}`}>
+                {f.comingSoon && (
+                  <span className="absolute top-4 right-4 font-mono-game text-[10px] tracking-[0.14em] font-bold px-2 py-0.5 rounded-md border-2 border-border bg-prosperity text-foreground">
+                    COMING SOON
+                  </span>
+                )}
                 <div className="mb-4 flex items-center justify-between">
                   <div
                     className="flex size-11 items-center justify-center rounded-xl bg-prosperity border-2 border-border"
