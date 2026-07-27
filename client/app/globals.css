@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Anton&display=swap");
 @import "tailwindcss";
 
 @font-face {
@@ -50,64 +51,80 @@
     --tracking-tighter: -0.03em;
 }
 
-/* ─── Celo Neobrutalism Design System ─────────────────────────────────────
-   Primary brand: Forest   #2D6A4F  (Celo forest green — borders, shadows, primary CTA)
-   Hero accent:   Prosperity #FCFF52 (Celo lime-yellow — selected, highlighted, badges)
-   Base:          Gypsum   #F5F0E6  (warm cream background)
-   Cards:         White    #FFFFFF
-   Text:          Ink      #1A1E1B  (dark green-tinted, not pure black)
+/* ─── Premium Modern Design System ──────────────────────────────────────
+   Primary brand: Lime Green  #C7F000 / #D7FF3A / #9FD300 (Celo-inspired)
+   Secondary:     Warm Yellow #FFD84A / #FFC928
+   Background:    Warm off-white #FFFDF8 / #FCFBF5 / #FAF8F2
+   Text primary:  Near black  #111111
+   Text secondary:Medium gray #666666
+   Glass surfaces:rgba(255,255,255,0.82) with 24px backdrop blur
 ─────────────────────────────────────────────────────────────────────────── */
 
 :root {
     --radius: 0.875rem;
 
     /* ── Base surfaces ───────────────────────── */
-    --background:  #F5F0E6;
-    --surface:     #EDE9DC;
-    --foreground:  #1A1E1B;
-    --muted:       #E3DDD5;
-    --muted-foreground: #6B7870;
+    --background:  #FFFDF8;
+    --surface:     #FCFBF5;
+    --foreground:  #111111;
+    --muted:       #FAF8F2;
+    --muted-foreground: #666666;
 
-    /* ── Forest green — primary brand / CTA ─── */
-    --primary:            #2fa265;
-    --primary-foreground: #FCFF52;
+    /* ── Lime green palette ──────────────────── */
+    --primary:            #C7F000;
+    --primary-light:      #D7FF3A;
+    --primary-dark:       #9FD300;
+    --primary-foreground: #111111;
 
-    /* ── Prosperity yellow — hero accent ───── */
+    /* ── Warm yellow accents ─────────────────── */
+    --secondary:          #FFD84A;
+    --secondary-dark:     #FFC928;
+    --secondary-foreground: #111111;
+
+    /* ── Prosperity yellow (legacy) ──────────── */
     --prosperity:            #FCFF52;
-    --prosperity-foreground: #1A1E1B;
+    --prosperity-foreground: #111111;
 
-    /* ── Success mid-green ───────────────────── */
-    --sage:      #2D8653;
-    --sage-soft: #E8F5EE;
-    --accent:            #2D8653;
-    --accent-foreground: #FFFFFF;
+    /* ── Success green ───────────────────────── */
+    --sage:      #9FD300;
+    --sage-soft: #F0FBE0;
+    --accent:            #C7F000;
+    --accent-foreground: #111111;
 
     /* ── Amber warning ──────────────────────── */
     --sand: #D97B0A;
 
     /* ── Cards ───────────────────────────────── */
-    --card:            #FFFFFF;
-    --card-foreground: #1A1E1B;
-    --popover:         #FFFFFF;
-    --popover-foreground: #1A1E1B;
+    --card:            rgba(255, 255, 255, 0.82);
+    --card-foreground: #111111;
+    --popover:         rgba(255, 255, 255, 0.9);
+    --popover-foreground: #111111;
 
     /* ── Semantic aliases ────────────────────── */
-    --secondary:            #EDE9DC;
-    --secondary-foreground: #1A1E1B;
+    --secondary-bg:     #FCFBF5;
+    --secondary-fg:     #111111;
 
     /* ── Destructive ────────────────────────── */
     --destructive:            #C93625;
     --destructive-foreground: #FFFFFF;
 
     /* ── Borders / inputs ───────────────────── */
-    --border: #2D6A4F;
-    --input:  #E3DDD5;
-    --ring:   #FCFF52;
+    --border: rgba(255, 255, 255, 0.5);
+    --input:  #E8E5DD;
+    --ring:   #C7F000;
 
-    /* ── Neobrutalism shadow token ──────────── */
-    --neo-shadow:       4px 4px 0 #2D6A4F;
-    --neo-shadow-lg:    6px 6px 0 #2D6A4F;
-    --neo-shadow-sm:    3px 3px 0 #2D6A4F;
+    /* ── Glassmorphism tokens ────────────────── */
+    --glass-bg: rgba(255, 255, 255, 0.82);
+    --glass-border: rgba(255, 255, 255, 0.6);
+    --glass-blur: 24px;
+    --glass-shadow: 0 30px 80px rgba(0, 0, 0, 0.12);
+    --glass-shadow-hover: 0 40px 100px rgba(0, 0, 0, 0.16);
+    --glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+
+    /* ── Bloom glow tokens ───────────────────── */
+    --bloom-lime: 0 0 30px rgba(214, 255, 0, 0.30), 0 0 60px rgba(214, 255, 0, 0.20), 0 0 90px rgba(255, 235, 0, 0.12);
+    --bloom-lime-intense: 0 0 40px rgba(214, 255, 0, 0.40), 0 0 80px rgba(214, 255, 0, 0.25), 0 0 120px rgba(255, 235, 0, 0.18);
+    --bloom-yellow: 0 0 30px rgba(255, 216, 74, 0.25), 0 0 60px rgba(255, 201, 40, 0.15);
 }
 
 @layer base {
@@ -242,6 +259,40 @@
         border: 2px solid var(--color-border);
         box-shadow: 2px 2px 0 var(--color-border);
         font-weight: 700;
+    }
+
+    @keyframes duel-float {
+        0%, 100% {
+            transform: translateY(0) rotate(0deg);
+        }
+        50% {
+            transform: translateY(-3px) rotate(-1deg);
+        }
+    }
+
+    @keyframes duel-spark {
+        0%, 100% {
+            opacity: 0.45;
+            transform: scale(0.92);
+        }
+        50% {
+            opacity: 0.9;
+            transform: scale(1.08);
+        }
+    }
+
+    .duel-avatar-float {
+        animation: duel-float 4.8s ease-in-out infinite;
+        transform-origin: center;
+    }
+
+    .duel-avatar-float-delayed {
+        animation-delay: 0.8s;
+    }
+
+    .duel-avatar-spark {
+        animation: duel-spark 2.6s ease-in-out infinite;
+        transform-origin: center;
     }
 
     .scrollbar-none {

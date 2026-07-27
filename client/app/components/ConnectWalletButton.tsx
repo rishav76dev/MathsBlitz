@@ -3,7 +3,7 @@
 import { useWallet } from "../hooks/useWallet";
 import { useAuth } from "../hooks/useAuth";
 import { WalletButton } from "./WalletButton";
-import { RiLoader4Line, RiWallet3Fill, RiShieldCheckFill } from "react-icons/ri";
+import { RiLoader4Line, RiShieldCheckFill } from "react-icons/ri";
 
 function truncateAddress(address: string) {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;

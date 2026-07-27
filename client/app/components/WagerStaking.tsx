@@ -36,6 +36,10 @@ function ExplorerLink({ txHash }: { txHash: string }) {
 
 export function WagerStaking({ wager, onExit }: { wager: WagerAmount; onExit: () => void }) {
   const { phase, txHash, error, stake, withdraw } = useEscrow(wager);
+  const ink = "#214d38";
+  const accentBg = "#e4e75d";
+  const cardBg = "rgba(220, 232, 211, 0.88)";
+  const cardBgSoft = "rgba(220, 232, 211, 0.72)";
 
   useEffect(() => {
     if (phase !== "withdrawn") return;
@@ -58,17 +62,20 @@ export function WagerStaking({ wager, onExit }: { wager: WagerAmount; onExit: ()
           <span className="font-display text-5xl font-extrabold text-foreground tabular-nums">
             {blitzAmount}
           </span>
-          <span className="text-xl text-primary font-bold">Blitz</span>
+          <span className="text-xl font-bold" style={{ color: "#214d38" }}>Blitz</span>
         </div>
         <span className="text-xs text-muted-foreground">
           Winner takes{" "}
-          <span className="text-primary font-semibold">95%</span> of the{" "}
+          <span className="font-semibold" style={{ color: "#214d38" }}>95%</span> of the{" "}
           <span className="text-foreground font-medium">{potAmount} Blitz</span> pot
         </span>
       </div>
 
       {/* State machine card */}
-      <div className="neo-card flex flex-col items-center gap-4 w-full px-6 py-7">
+      <div
+        className="neo-card flex flex-col items-center gap-4 w-full px-6 py-7"
+        style={{ background: cardBg }}
+      >
 
         {(phase === "idle" || phase === "requesting") && (
           <>
@@ -81,7 +88,7 @@ export function WagerStaking({ wager, onExit }: { wager: WagerAmount; onExit: ()
           <>
             <div
               className="flex size-14 items-center justify-center rounded-2xl bg-prosperity border-2 border-border"
-              style={{ boxShadow: "3px 3px 0 #2D6A4F" }}
+              style={{ background: accentBg, boxShadow: `3px 3px 0 ${ink}` }}
             >
               <RiCoinsFill size={28} className="text-foreground" />
             </div>
@@ -92,6 +99,7 @@ export function WagerStaking({ wager, onExit }: { wager: WagerAmount; onExit: ()
             <button
               onClick={stake}
               className="neo-btn-primary w-full py-3.5 text-base"
+              style={{ background: accentBg }}
             >
               Stake {blitzAmount} Blitz
             </button>
@@ -120,7 +128,7 @@ export function WagerStaking({ wager, onExit }: { wager: WagerAmount; onExit: ()
               <div className="absolute size-14 rounded-full border-2 border-primary/20 animate-ping [animation-delay:0.35s]" />
               <div
                 className="flex size-11 items-center justify-center rounded-full bg-prosperity border-2 border-border"
-                style={{ boxShadow: "3px 3px 0 #2D6A4F" }}
+                style={{ background: accentBg, boxShadow: `3px 3px 0 ${ink}` }}
               >
                 <RiSwordFill size={22} className="text-foreground" />
               </div>
@@ -132,6 +140,7 @@ export function WagerStaking({ wager, onExit }: { wager: WagerAmount; onExit: ()
             <button
               onClick={withdraw}
               className="neo-btn-ghost w-full py-3 text-sm"
+              style={{ background: cardBgSoft }}
             >
               Leave Queue &amp; Reclaim Stake
             </button>
@@ -149,12 +158,12 @@ export function WagerStaking({ wager, onExit }: { wager: WagerAmount; onExit: ()
           <>
             <div
               className="flex size-14 items-center justify-center rounded-2xl border-2 border-border"
-              style={{ background: "#FCFF52", boxShadow: "3px 3px 0 #2D6A4F" }}
+              style={{ background: accentBg, boxShadow: `3px 3px 0 ${ink}` }}
             >
               <RiWalletFill size={28} className="text-foreground" />
             </div>
             <div className="flex flex-col items-center gap-1 text-center">
-              <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest" style={{ color: "#2D6A4F" }}>
+              <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest" style={{ color: ink }}>
                 <RiCheckLine size={13} />
                 Stake returned
               </span>
@@ -184,6 +193,7 @@ export function WagerStaking({ wager, onExit }: { wager: WagerAmount; onExit: ()
         <button
           onClick={onExit}
           className="neo-btn-ghost inline-flex items-center gap-1 w-full justify-center py-3 text-sm"
+          style={{ background: cardBgSoft }}
         >
           <RiArrowLeftSLine size={16} />
           Cancel

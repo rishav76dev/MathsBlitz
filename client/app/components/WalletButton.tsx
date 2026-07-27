@@ -35,7 +35,7 @@ export function WalletButton({ size = "md" }: { size?: "sm" | "md" }) {
               onMouseEnter={e => { e.currentTarget.style.transform = "translate(-1px,-1px)"; e.currentTarget.style.boxShadow = "4px 4px 0 #1A1E1B"; }}
               onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = "3px 3px 0 #1A1E1B"; }}
             >
-              Connect Wallet
+              {isMiniPay ? "Connect MiniPay Wallet" : "Connect Wallet"}
             </button>
           );
         }
