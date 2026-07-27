@@ -13,13 +13,6 @@ import {
   RiWallet3Fill,
 } from "react-icons/ri";
 
-const navItems = [
-  { label: "Play", href: "#play", active: true },
-  { label: "Leaderboard", href: "#leaderboard" },
-  { label: "How it Works", href: "#how-it-works" },
-  { label: "Docs", href: "#docs" },
-];
-
 const featurePills = [
   {
     icon: RiFlashlightFill,
@@ -64,14 +57,16 @@ export default function Home() {
       <div className="relative mx-auto flex min-h-screen max-w-[1320px] flex-col px-3 pb-4 pt-3 sm:px-6 lg:px-8">
         <header className="flex items-center justify-between gap-3 py-2 sm:gap-4 sm:py-3">
           <Link href="/" className="flex items-center gap-2.5 sm:gap-3">
-            <Image
-              src="/logo.png"
-              alt="MathsBlitz logo"
-              width={76}
-              height={76}
-              className="h-11 w-11 rounded-2xl shadow-[0_10px_24px_rgba(105,112,0,0.18)] sm:h-[76px] sm:w-[76px]"
-              priority
-            />
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl sm:h-[76px] sm:w-[76px]">
+              <Image
+                src="/logo.png"
+                alt="MathsBlitz logo"
+                width={76}
+                height={76}
+                className="h-full w-full object-contain"
+                priority
+              />
+            </div>
             <div className="leading-none">
               <div className="text-[15px] font-black tracking-[-0.06em] sm:text-[24px]">
                 MATHS
@@ -81,23 +76,6 @@ export default function Home() {
               </div>
             </div>
           </Link>
-
-          <nav className="hidden items-center gap-10 xl:flex">
-            {navItems.map((item) => (
-              <a
-                key={item.label}
-                href={item.href}
-                className={`relative text-[17px] font-semibold tracking-[-0.03em] transition ${
-                  item.active ? "text-[#111111]" : "text-[#111111]/90"
-                }`}
-              >
-                {item.label}
-                {item.active ? (
-                  <span className="absolute -bottom-3 left-0 h-1 w-full rounded-full bg-[#c2d52a]" />
-                ) : null}
-              </a>
-            ))}
-          </nav>
 
           <div className="hidden lg:block">
             <ConnectWalletButton />
